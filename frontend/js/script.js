@@ -1,8 +1,8 @@
-const API = "http://localhost:5000"
+const API = "https://ecommerce-store-ju5z.onrender.com"
 
 // ── Auth ──
 const getToken = () => localStorage.getItem("token")
-const getUser  = () => JSON.parse(localStorage.getItem("user") || "null")
+const getUser = () => JSON.parse(localStorage.getItem("user") || "null")
 const isLoggedIn = () => !!getToken()
 
 // ── Cart ──
@@ -11,9 +11,9 @@ const saveCart = (cart) => { localStorage.setItem("cart", JSON.stringify(cart));
 
 function addToCart(product) {
     const cart = getCart()
-    const idx  = cart.findIndex(i => i._id === product._id)
+    const idx = cart.findIndex(i => i._id === product._id)
     if (idx > -1) { cart[idx].qty = (cart[idx].qty || 1) + 1 }
-    else           { cart.push({ ...product, qty: 1 }) }
+    else { cart.push({ ...product, qty: 1 }) }
     saveCart(cart)
     showToast(`"${product.name}" added to cart ✓`, "success")
 }
@@ -24,7 +24,7 @@ function removeFromCart(id) {
 
 function updateCartQty(id, delta) {
     const cart = getCart()
-    const idx  = cart.findIndex(i => i._id === id)
+    const idx = cart.findIndex(i => i._id === id)
     if (idx === -1) return
     cart[idx].qty = Math.max(1, (cart[idx].qty || 1) + delta)
     saveCart(cart)
@@ -64,7 +64,7 @@ function setLoading(btnId, loading) {
     if (!btn) return
     btn.disabled = loading
     btn.dataset.orig = btn.dataset.orig || btn.textContent
-    btn.textContent  = loading ? "Please wait…" : btn.dataset.orig
+    btn.textContent = loading ? "Please wait…" : btn.dataset.orig
 }
 
 function formatPrice(n) { return "₹" + Number(n).toLocaleString("en-IN") }
@@ -81,15 +81,15 @@ function navbar(active = "") {
     <nav class="navbar">
         <a href="index.html" class="navbar-brand">⚡ ShopVibe</a>
         <ul class="navbar-links">
-            <li><a href="index.html" class="${active==="home"?"active":""}" >Home</a></li>
-            <li class="hide-mobile"><a href="cart.html" class="${active==="cart"?"active":""} cart-link">
+            <li><a href="index.html" class="${active === "home" ? "active" : ""}" >Home</a></li>
+            <li class="hide-mobile"><a href="cart.html" class="${active === "cart" ? "active" : ""} cart-link">
                 🛒 Cart <span id="cart-count" class="cart-count" style="display:none">0</span>
             </a></li>
             ${user
-                ? `<li><a href="#" onclick="logout()">Logout</a></li>`
-                : `<li><a href="login.html" class="${active==="login"?"active":""}">Login</a></li>
+            ? `<li><a href="#" onclick="logout()">Logout</a></li>`
+            : `<li><a href="login.html" class="${active === "login" ? "active" : ""}">Login</a></li>
                    <li><a href="register.html" class="btn btn-primary btn-sm">Sign Up</a></li>`
-            }
+        }
             <li class="hide-desktop" style="display:none"><a href="cart.html">🛒 <span id="cart-count2">0</span></a></li>
         </ul>
     </nav>`

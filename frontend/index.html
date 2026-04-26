@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -7,83 +8,91 @@
     <title>ShopVibe – Home</title>
     <link rel="stylesheet" href="css/style.css" />
 </head>
+
 <body>
-<div id="navbar-root"></div>
+    <div id="navbar-root"></div>
 
-<main class="main">
-    <!-- Hero -->
-    <section class="hero">
-        <div class="container">
-            <div class="hero-badge">✨ New Arrivals Every Week</div>
-            <h1>Shop the <span class="gradient-text">Future</span><br>of Style</h1>
-            <p>Curated products, unbeatable prices, lightning-fast delivery. Your premium shopping destination.</p>
-            <div class="hero-actions">
-                <a href="#products" class="btn btn-primary btn-lg">Browse Products</a>
-                <a href="cart.html"  class="btn btn-secondary btn-lg">View Cart</a>
+    <main class="main">
+        <!-- Hero -->
+        <section class="hero">
+            <div class="container">
+                <div class="hero-badge">✨ New Arrivals Every Week</div>
+                <h1>Shop the <span class="gradient-text">Future</span><br>of Style</h1>
+                <p>Curated products, unbeatable prices, lightning-fast delivery. Your premium shopping destination.</p>
+                <div class="hero-actions">
+                    <a href="#products" class="btn btn-primary btn-lg">Browse Products</a>
+                    <a href="cart.html" class="btn btn-secondary btn-lg">View Cart</a>
+                </div>
             </div>
-        </div>
-    </section>
+        </section>
 
-    <!-- Products -->
-    <section class="section" id="products">
-        <div class="container">
-            <h2 class="section-title">All Products</h2>
-            <p class="section-sub">Handpicked items, just for you</p>
+        <!-- Products -->
+        <section class="section" id="products">
+            <div class="container">
+                <h2 class="section-title">All Products</h2>
+                <p class="section-sub">Handpicked items, just for you</p>
 
-            <!-- Search & Filter -->
-            <div style="display:flex;gap:1rem;margin-bottom:2rem;flex-wrap:wrap;">
-                <input id="search-input" type="text" placeholder="Search products…"
-                    style="flex:1;min-width:200px;background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:var(--radius-md);padding:0.65rem 1rem;color:var(--text-primary);font-family:inherit;outline:none;" />
-                <select id="cat-filter"
-                    style="background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:var(--radius-md);padding:0.65rem 1rem;color:var(--text-primary);font-family:inherit;outline:none;">
-                    <option value="">All Categories</option>
-                </select>
+                <!-- Search & Filter -->
+                <div style="display:flex;gap:1rem;margin-bottom:2rem;flex-wrap:wrap;">
+                    <input id="search-input" type="text" placeholder="Search products…"
+                        style="flex:1;min-width:200px;background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:var(--radius-md);padding:0.65rem 1rem;color:var(--text-primary);font-family:inherit;outline:none;" />
+                    <select id="cat-filter"
+                        style="background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:var(--radius-md);padding:0.65rem 1rem;color:var(--text-primary);font-family:inherit;outline:none;">
+                        <option value="">All Categories</option>
+                    </select>
+                </div>
+
+                <div id="loader" class="loader">
+                    <div class="spinner"></div>
+                </div>
+                <div id="products-grid" class="product-grid" style="display:none"></div>
+                <div id="empty" class="empty-state" style="display:none">
+                    <div class="empty-icon">📦</div>
+                    <h3>No products found</h3>
+                    <p>Try a different search term or category.</p>
+                </div>
             </div>
+        </section>
+    </main>
 
-            <div id="loader" class="loader"><div class="spinner"></div></div>
-            <div id="products-grid" class="product-grid" style="display:none"></div>
-            <div id="empty" class="empty-state" style="display:none">
-                <div class="empty-icon">📦</div>
-                <h3>No products found</h3>
-                <p>Try a different search term or category.</p>
-            </div>
-        </div>
-    </section>
-</main>
+    <div id="toast"></div>
+    <script src="js/script.js"></script>
+    <script>
+        document.getElementById("navbar-root").innerHTML = navbar("home")
+        updateCartCount()
 
-<div id="toast"></div>
-<script src="js/script.js"></script>
-<script>
-    document.getElementById("navbar-root").innerHTML = navbar("home")
-    updateCartCount()
+        let allProducts = []
 
-    let allProducts = []
+        async function loadProducts() {
+            try {
+                const res = await fetch(`${API}/api/products`)
+                const data = await res.json()
 
-    async function loadProducts() {
-        try {
-            const res  = await fetch(`${API}/api/products`)
-            allProducts = await res.json()
-            populateCategories()
-            renderProducts(allProducts)
-        } catch {
-            showToast("Failed to load products", "error")
-        } finally {
-            document.getElementById("loader").style.display = "none"
+                // FIX: extract the products array from API response
+                allProducts = data.products || []
+
+                populateCategories()
+                renderProducts(allProducts)
+            } catch (err) {
+                console.error(err)
+                showToast("Failed to load products", "error")
+            } finally {
+                document.getElementById("loader").style.display = "none"
+            }
         }
-    }
 
-    function populateCategories() {
-        const cats = [...new Set(allProducts.map(p => p.category).filter(Boolean))]
-        const sel  = document.getElementById("cat-filter")
-        cats.forEach(c => { const o = document.createElement("option"); o.value = c; o.textContent = c; sel.appendChild(o) })
-    }
+        function populateCategories() {
+            const cats = [...new Set(allProducts.map(p => p.category).filter(Boolean))]
+            const sel = document.getElementById("cat-filter")
+            cats.forEach(c => { const o = document.createElement("option"); o.value = c; o.textContent = c; sel.appendChild(o) })
+        }
 
-    function renderProducts(products) {
-        const grid  = document.getElementById("products-grid")
-        const empty = document.getElementById("empty")
-        if (!products.length) { grid.style.display = "none"; empty.style.display = "block"; return }
-        empty.style.display = "none"; grid.style.display = "grid"
-        grid.innerHTML = products.map(p => `
+        function renderProducts(products) {
+            const grid = document.getElementById("products-grid")
+            const empty = document.getElementById("empty")
+            if (!products.length) { grid.style.display = "none"; empty.style.display = "block"; return }
+            empty.style.display = "none"; grid.style.display = "grid"
+            grid.innerHTML = products.map(p => `
             <article class="card product-card fade-in">
                 <div class="product-img">
                     <img src="${productImg(p)}" alt="${p.name}" loading="lazy" onerror="this.src='https://picsum.photos/seed/${p._id}/400/300'" />
@@ -100,25 +109,26 @@
                     </div>
                     <div class="product-actions">
                         <a href="product.html?id=${p._id}" class="btn btn-secondary btn-sm">Details</a>
-                        <button class="btn btn-primary btn-sm" onclick='addToCart(${JSON.stringify(p)})' ${p.stock===0?"disabled":""}>Add to Cart</button>
+                        <button class="btn btn-primary btn-sm" onclick='addToCart(${JSON.stringify(p)})' ${p.stock === 0 ? "disabled" : ""}>Add to Cart</button>
                     </div>
                 </div>
             </article>`).join("")
-    }
+        }
 
-    function filterProducts() {
-        const q   = document.getElementById("search-input").value.toLowerCase()
-        const cat = document.getElementById("cat-filter").value
-        renderProducts(allProducts.filter(p =>
-            (!q || p.name.toLowerCase().includes(q) || (p.description||"").toLowerCase().includes(q)) &&
-            (!cat || p.category === cat)
-        ))
-    }
+        function filterProducts() {
+            const q = document.getElementById("search-input").value.toLowerCase()
+            const cat = document.getElementById("cat-filter").value
+            renderProducts(allProducts.filter(p =>
+                (!q || p.name.toLowerCase().includes(q) || (p.description || "").toLowerCase().includes(q)) &&
+                (!cat || p.category === cat)
+            ))
+        }
 
-    document.getElementById("search-input").addEventListener("input", filterProducts)
-    document.getElementById("cat-filter").addEventListener("change", filterProducts)
+        document.getElementById("search-input").addEventListener("input", filterProducts)
+        document.getElementById("cat-filter").addEventListener("change", filterProducts)
 
-    loadProducts()
-</script>
+        loadProducts()
+    </script>
 </body>
+
 </html>

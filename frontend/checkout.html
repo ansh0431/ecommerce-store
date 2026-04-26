@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Checkout – ShopVibe" />
+    <title>Checkout – ShopVibe</title>
+    <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+<div id="navbar-root"></div>
+<main class="main">
+    <div class="container section">
+        <h1 class="section-title">Checkout</h1>
+        <p class="section-sub">Review your order and place it</p>
+
+        <!-- Not logged in -->
+        <div id="auth-required" class="empty-state" style="display:none">
+            <div class="empty-icon">🔒</div>
+            <h3>Login Required</h3>
+            <p>You need to login before placing an order.</p>
+            <a href="login.html" class="btn btn-primary">Login Now</a>
+        </div>
+
+        <!-- Empty cart -->
+        <div id="empty-cart" class="empty-state" style="display:none">
+            <div class="empty-icon">🛒</div>
+            <h3>Your cart is empty</h3>
+            <p>Add products to your cart before checking out.</p>
+            <a href="index.html" class="btn btn-primary">Browse Products</a>
+        </div>
+
+        <!-- Checkout form -->
+        <div id="checkout-content" class="checkout-layout" style="display:none">
+            <!-- Left: Order items + shipping info -->
+            <div style="display:flex;flex-direction:column;gap:1.5rem;">
+                <div class="card" style="padding:1.5rem">
+                    <h3 style="margin-bottom:1rem;font-size:1rem;color:var(--text-secondary)">YOUR ITEMS</h3>
+                    <div id="checkout-items"></div>
+                </div>
+
+                <div class="card" style="padding:1.5rem">
+                    <h3 style="margin-bottom:1.25rem;font-size:1rem;color:var(--text-secondary)">SHIPPING DETAILS</h3>
+                    <div class="form-group">
+                        <label for="full-name">Full Name</label>
+                        <input id="full-name" type="text" placeholder="John Doe" />
+                    </div>
+                    <div class="form-group">
+                        <label for="address">Delivery Address</label>
+                        <input id="address" type="text" placeholder="123 Main St, City" />
+                    </div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">
+                        <div class="form-group">
+                            <label for="phone">Phone</label>
+                            <input id="phone" type="tel" placeholder="+91 99999 99999" />
+                        </div>
+                        <div class="form-group">
+                            <label for="pincode">Pincode</label>
+                            <input id="pincode" type="text" placeholder="400001" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right: Summary -->
+            <div class="card order-summary" style="position:sticky;top:80px">
+                <h3>Payment Summary</h3>
+                <div class="summary-row"><span>Subtotal</span><span id="sum-subtotal">₹0</span></div>
+                <div class="summary-row"><span>Delivery</span><span style="color:var(--success)">FREE</span></div>
+                <div class="summary-row"><span>Discount</span><span style="color:var(--success)">−₹0</span></div>
+                <div class="divider"></div>
+                <div class="summary-row total"><span>Total</span><span id="sum-total">₹0</span></div>
+
+                <div id="order-alert" class="alert" style="margin-top:1rem"></div>
+
+                <button id="place-order-btn" class="btn btn-primary btn-full btn-lg" style="margin-top:1rem" onclick="placeOrder()">
+                    Place Order 🎉
+                </button>
+                <p style="font-size:0.75rem;color:var(--text-muted);text-align:center;margin-top:0.75rem">
+                    🔒 Secure checkout · Free returns
+                </p>
+            </div>
+        </div>
+
+        <!-- Success state -->
+        <div id="order-success" class="empty-state" style="display:none">
+            <div class="empty-icon">🎉</div>
+            <h3>Order Placed Successfully!</h3>
+            <p>Thank you for your purchase. Your order is being processed.</p>
+            <div style="display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;margin-top:1rem">
+                <a href="index.html" class="btn btn-primary">Continue Shopping</a>
+            </div>
+        </div>
+    </div>
+</main>
+<div id="toast"></div>
+<script src="js/script.js"></script>
+<script>
+    document.getElementById("navbar-root").innerHTML = navbar()
+    updateCartCount()
+
+    const cart = getCart()
+
+    function init() {
+        if (!isLoggedIn()) { document.getElementById("auth-required").style.display = "block"; return }
+        if (!cart.length)  { document.getElementById("empty-cart").style.display = "block"; return }
+
+        document.getElementById("checkout-content").style.display = "grid"
+
+        // Pre-fill name from stored user
+        const user = getUser()
+        if (user) document.getElementById("full-name").value = user.name || ""
+
+        // Render items
+        document.getElementById("checkout-items").innerHTML =
+            cart.map(i => `
+                <div class="checkout-item">
+                    <span>${i.name} <span style="color:var(--text-muted)">× ${i.qty || 1}</span></span>
+                    <span style="font-weight:600;color:var(--accent-light)">${formatPrice(i.price * (i.qty || 1))}</span>
+                </div>`).join("") +
+            `<div class="checkout-item" style="border:none;margin-top:0.5rem">
+                <span style="font-weight:700">Total</span>
+                <span style="font-weight:800;color:var(--accent-light)">${formatPrice(getCartTotal())}</span>
+            </div>`
+
+        const total = getCartTotal()
+        document.getElementById("sum-subtotal").textContent = formatPrice(total)
+        document.getElementById("sum-total").textContent    = formatPrice(total)
+    }
+
+    async function placeOrder() {
+        const name    = document.getElementById("full-name").value.trim()
+        const address = document.getElementById("address").value.trim()
+        const phone   = document.getElementById("phone").value.trim()
+
+        if (!name || !address || !phone) {
+            showAlert("order-alert", "Please fill in all shipping details.")
+            return
+        }
+
+        const products = cart.map(i => ({ productId: i._id, quantity: i.qty || 1 }))
+        const payload  = { products, totalPrice: getCartTotal() }
+
+        setLoading("place-order-btn", true)
+        try {
+            const res = await fetch(`${API}/api/orders`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${getToken()}`
+                },
+                body: JSON.stringify(payload)
+            })
+            const data = await res.json()
+            if (!res.ok) { showAlert("order-alert", data.error || data.message || "Order failed."); return }
+
+            // Clear cart and show success
+            saveCart([])
+            document.getElementById("checkout-content").style.display = "none"
+            document.getElementById("order-success").style.display    = "block"
+            showToast("Order placed! 🎉", "success")
+        } catch {
+            showAlert("order-alert", "Network error. Is the backend running?")
+        } finally {
+            setLoading("place-order-btn", false)
+        }
+    }
+
+    init()
+</script>
+</body>
+</html>

@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Product details – ShopVibe" />
+    <title>Product Details – ShopVibe</title>
+    <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+<div id="navbar-root"></div>
+<main class="main">
+    <div class="container">
+        <div id="loader" class="loader"><div class="spinner"></div></div>
+        <div id="detail" style="display:none"></div>
+        <div id="not-found" class="empty-state" style="display:none">
+            <div class="empty-icon">❓</div>
+            <h3>Product not found</h3>
+            <p>The product you're looking for doesn't exist.</p>
+            <a href="index.html" class="btn btn-primary">Back to Shop</a>
+        </div>
+    </div>
+</main>
+<div id="toast"></div>
+<script src="js/script.js"></script>
+<script>
+    document.getElementById("navbar-root").innerHTML = navbar()
+    updateCartCount()
+
+    const params = new URLSearchParams(location.search)
+    const id     = params.get("id")
+
+    async function loadProduct() {
+        if (!id) { showNotFound(); return }
+        try {
+            const res = await fetch(`${API}/api/products/${id}`)
+            if (!res.ok) { showNotFound(); return }
+            const p = await res.json()
+            document.title = `${p.name} – ShopVibe`
+            render(p)
+        } catch {
+            showNotFound()
+        } finally {
+            document.getElementById("loader").style.display = "none"
+        }
+    }
+
+    function showNotFound() {
+        document.getElementById("loader").style.display = "none"
+        document.getElementById("not-found").style.display = "block"
+    }
+
+    function render(p) {
+        const el = document.getElementById("detail")
+        el.style.display = "block"
+        el.innerHTML = `
+            <a href="index.html" class="btn btn-secondary btn-sm" style="margin:1.5rem 0;display:inline-flex;">← Back to Shop</a>
+            <div class="product-detail">
+                <div class="product-detail-img">
+                    <img src="${productImg(p)}" alt="${p.name}" onerror="this.src='https://picsum.photos/seed/${p._id}/600/600'" />
+                </div>
+                <div class="product-detail-info">
+                    ${p.category ? `<span class="stock-badge in-stock" style="font-size:0.78rem">${p.category}</span>` : ""}
+                    <h1>${p.name}</h1>
+                    <div class="product-detail-price">${formatPrice(p.price)}</div>
+                    <p class="product-detail-desc">${p.description || "No description available."}</p>
+                    <div style="display:flex;align-items:center;gap:0.75rem;">
+                        <span class="stock-badge ${p.stock > 0 ? "in-stock" : "out-stock"}">
+                            ${p.stock > 0 ? `${p.stock} in stock` : "Out of stock"}
+                        </span>
+                    </div>
+                    <div class="qty-selector">
+                        <label>Quantity:</label>
+                        <div style="display:flex;align-items:center;gap:0.5rem;">
+                            <button class="qty-btn" onclick="changeQty(-1)">−</button>
+                            <span id="qty-val" class="qty-value">1</span>
+                            <button class="qty-btn" onclick="changeQty(1)">+</button>
+                        </div>
+                    </div>
+                    <div style="display:flex;gap:1rem;flex-wrap:wrap;">
+                        <button class="btn btn-primary btn-lg" onclick='addMultiple(${JSON.stringify(p)})' ${p.stock===0?"disabled":""}>
+                            🛒 Add to Cart
+                        </button>
+                        <a href="cart.html" class="btn btn-secondary btn-lg">View Cart</a>
+                    </div>
+                </div>
+            </div>`
+    }
+
+    let qty = 1
+    function changeQty(d) {
+        qty = Math.max(1, qty + d)
+        document.getElementById("qty-val").textContent = qty
+    }
+
+    function addMultiple(p) {
+        for (let i = 0; i < qty; i++) addToCart(p)
+    }
+
+    loadProduct()
+</script>
+</body>
+</html>

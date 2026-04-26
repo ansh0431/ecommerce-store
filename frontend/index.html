@@ -70,7 +70,7 @@
 
                 // FIX: extract the products array from API response
                 allProducts = data.products || []
-
+                console.log("Products received:", allProducts)
                 populateCategories()
                 renderProducts(allProducts)
             } catch (err) {

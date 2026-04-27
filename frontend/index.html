@@ -29,27 +29,46 @@
         <!-- Products -->
         <section class="section" id="products">
             <div class="container">
-                <h2 class="section-title">All Products</h2>
-                <p class="section-sub">Handpicked items, just for you</p>
+                <div class="section-header">
+                    <div>
+                        <h2 class="section-title">All Products</h2>
+                        <p class="section-sub">Handpicked items, just for you</p>
+                    </div>
+                </div>
 
                 <!-- Search & Filter -->
-                <div style="display:flex;gap:1rem;margin-bottom:2rem;flex-wrap:wrap;">
-                    <input id="search-input" type="text" placeholder="Search products…"
-                        style="flex:1;min-width:200px;background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:var(--radius-md);padding:0.65rem 1rem;color:var(--text-primary);font-family:inherit;outline:none;" />
-                    <select id="cat-filter"
-                        style="background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:var(--radius-md);padding:0.65rem 1rem;color:var(--text-primary);font-family:inherit;outline:none;">
+                <div class="filter-bar">
+                    <div class="search-box">
+                        <input id="search-input" type="text" placeholder="Search products…" />
+                        <span class="search-icon">🔍</span>
+                    </div>
+                    <select id="cat-filter">
                         <option value="">All Categories</option>
+                    </select>
+                    <select id="sort-filter">
+                        <option value="latest">Latest</option>
+                        <option value="price_asc">Price: Low to High</option>
+                        <option value="price_desc">Price: High to Low</option>
                     </select>
                 </div>
 
                 <div id="loader" class="loader">
                     <div class="spinner"></div>
                 </div>
+                
                 <div id="products-grid" class="product-grid" style="display:none"></div>
+                
                 <div id="empty" class="empty-state" style="display:none">
                     <div class="empty-icon">📦</div>
                     <h3>No products found</h3>
                     <p>Try a different search term or category.</p>
+                </div>
+
+                <!-- Pagination -->
+                <div id="pagination" class="pagination" style="display:none">
+                    <button id="prev-page" class="btn btn-secondary btn-sm">Previous</button>
+                    <span id="page-info">Page 1 of 1</span>
+                    <button id="next-page" class="btn btn-secondary btn-sm">Next</button>
                 </div>
             </div>
         </section>
@@ -61,18 +80,41 @@
         document.getElementById("navbar-root").innerHTML = navbar("home")
         updateCartCount()
 
-        let allProducts = []
+        let currentPage = 1
+        let totalPages = 1
 
-        async function loadProducts() {
+        async function loadProducts(q = "", cat = "", sort = "latest", page = 1) {
             try {
-                const res = await fetch(`${API}/api/products`)
+                document.getElementById("loader").style.display = "flex"
+                document.getElementById("products-grid").style.display = "none"
+                document.getElementById("empty").style.display = "none"
+                document.getElementById("pagination").style.display = "none"
+                
+                const query = new URLSearchParams()
+                if (q) query.append("search", q)
+                if (cat) query.append("category", cat)
+                if (sort) query.append("sort", sort)
+                query.append("page", page)
+                query.append("limit", 12)
+                
+                const res = await fetch(`${API}/api/products?${query.toString()}`)
                 const data = await res.json()
 
-                // FIX: extract the products array from API response
-                allProducts = data.products || []
-                console.log("Products received:", allProducts)
-                populateCategories()
-                renderProducts(allProducts)
+                const products = data.products || []
+                const pagination = data.pagination || { pages: 1, total: products.length }
+                
+                totalPages = pagination.pages
+                currentPage = page
+
+                // Only populate categories once initially
+                if (!cat && !q && sort === "latest" && document.getElementById("cat-filter").options.length === 1) {
+                    // We might need a separate endpoint for categories if allProducts isn't full list
+                    // but for now let's use what we have
+                    populateCategories(products)
+                }
+                
+                renderProducts(products)
+                renderPagination(pagination)
             } catch (err) {
                 console.error(err)
                 showToast("Failed to load products", "error")
@@ -81,17 +123,29 @@
             }
         }
 
-        function populateCategories() {
-            const cats = [...new Set(allProducts.map(p => p.category).filter(Boolean))]
+        function populateCategories(products) {
+            // This is a bit limited since it only sees the first page's categories
+            // Ideally backend would have a /categories endpoint
+            const cats = [...new Set(products.map(p => p.category).filter(Boolean))]
             const sel = document.getElementById("cat-filter")
-            cats.forEach(c => { const o = document.createElement("option"); o.value = c; o.textContent = c; sel.appendChild(o) })
+            cats.forEach(c => { 
+                const o = document.createElement("option")
+                o.value = c
+                o.textContent = c
+                sel.appendChild(o) 
+            })
         }
 
         function renderProducts(products) {
             const grid = document.getElementById("products-grid")
             const empty = document.getElementById("empty")
-            if (!products.length) { grid.style.display = "none"; empty.style.display = "block"; return }
-            empty.style.display = "none"; grid.style.display = "grid"
+            if (!products || !products.length) { 
+                grid.style.display = "none"
+                empty.style.display = "block"
+                return 
+            }
+            empty.style.display = "none"
+            grid.style.display = "grid"
             grid.innerHTML = products.map(p => `
             <article class="card product-card fade-in">
                 <div class="product-img">
@@ -99,8 +153,11 @@
                     ${p.category ? `<span class="category-tag">${p.category}</span>` : ""}
                 </div>
                 <div class="product-body">
-                    <h3 class="product-name">${p.name}</h3>
-                    <p class="product-desc">${p.description || "No description available."}</p>
+                    <h3 class="product-name"><a href="product.html?id=${p._id}">${p.name}</a></h3>
+                    <div class="product-rating">
+                        ${renderStars(p.rating)} <span class="review-count">(${p.numReviews || 0})</span>
+                    </div>
+                    <p class="product-desc">${p.description ? p.description.substring(0, 80) + '...' : "No description available."}</p>
                     <div class="product-footer">
                         <span class="product-price">${formatPrice(p.price)}</span>
                         <span class="stock-badge ${p.stock > 0 ? "in-stock" : "out-stock"}">
@@ -115,17 +172,53 @@
             </article>`).join("")
         }
 
-        function filterProducts() {
-            const q = document.getElementById("search-input").value.toLowerCase()
-            const cat = document.getElementById("cat-filter").value
-            renderProducts(allProducts.filter(p =>
-                (!q || p.name.toLowerCase().includes(q) || (p.description || "").toLowerCase().includes(q)) &&
-                (!cat || p.category === cat)
-            ))
+        function renderStars(rating = 0) {
+            const fullStars = Math.floor(rating)
+            const halfStar = rating % 1 >= 0.5 ? 1 : 0
+            const emptyStars = 5 - fullStars - halfStar
+            return "⭐".repeat(fullStars) + (halfStar ? "✨" : "") + "☆".repeat(emptyStars)
         }
 
-        document.getElementById("search-input").addEventListener("input", filterProducts)
-        document.getElementById("cat-filter").addEventListener("change", filterProducts)
+        function renderPagination(pagination) {
+            const nav = document.getElementById("pagination")
+            if (pagination.pages <= 1) {
+                nav.style.display = "none"
+                return
+            }
+            nav.style.display = "flex"
+            document.getElementById("page-info").textContent = `Page ${currentPage} of ${pagination.pages}`
+            document.getElementById("prev-page").disabled = currentPage === 1
+            document.getElementById("next-page").disabled = currentPage === pagination.pages
+        }
+
+        const applyFilters = debounce(() => {
+            const q = document.getElementById("search-input").value.trim()
+            const cat = document.getElementById("cat-filter").value
+            const sort = document.getElementById("sort-filter").value
+            loadProducts(q, cat, sort, 1)
+        }, 500)
+
+        document.getElementById("search-input").addEventListener("input", applyFilters)
+        document.getElementById("cat-filter").addEventListener("change", applyFilters)
+        document.getElementById("sort-filter").addEventListener("change", applyFilters)
+
+        document.getElementById("prev-page").addEventListener("click", () => {
+            if (currentPage > 1) {
+                const q = document.getElementById("search-input").value.trim()
+                const cat = document.getElementById("cat-filter").value
+                const sort = document.getElementById("sort-filter").value
+                loadProducts(q, cat, sort, currentPage - 1)
+            }
+        })
+
+        document.getElementById("next-page").addEventListener("click", () => {
+            if (currentPage < totalPages) {
+                const q = document.getElementById("search-input").value.trim()
+                const cat = document.getElementById("cat-filter").value
+                const sort = document.getElementById("sort-filter").value
+                loadProducts(q, cat, sort, currentPage + 1)
+            }
+        })
 
         loadProducts()
     </script>

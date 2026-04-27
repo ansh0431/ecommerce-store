@@ -1,103 +1,289 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Product details – ShopVibe" />
     <title>Product Details – ShopVibe</title>
     <link rel="stylesheet" href="css/style.css" />
 </head>
+
 <body>
-<div id="navbar-root"></div>
-<main class="main">
-    <div class="container">
-        <div id="loader" class="loader"><div class="spinner"></div></div>
-        <div id="detail" style="display:none"></div>
-        <div id="not-found" class="empty-state" style="display:none">
-            <div class="empty-icon">❓</div>
-            <h3>Product not found</h3>
-            <p>The product you're looking for doesn't exist.</p>
-            <a href="index.html" class="btn btn-primary">Back to Shop</a>
-        </div>
-    </div>
-</main>
-<div id="toast"></div>
-<script src="js/script.js"></script>
-<script>
-    document.getElementById("navbar-root").innerHTML = navbar()
-    updateCartCount()
+    <div id="navbar-root"></div>
 
-    const params = new URLSearchParams(location.search)
-    const id     = params.get("id")
+    <main class="main">
+        <div class="container section">
+            <div id="loader" class="loader">
+                <div class="spinner"></div>
+            </div>
 
-    async function loadProduct() {
-        if (!id) { showNotFound(); return }
-        try {
-            const res = await fetch(`${API}/api/products/${id}`)
-            if (!res.ok) { showNotFound(); return }
-            const p = await res.json()
-            document.title = `${p.name} – ShopVibe`
-            render(p)
-        } catch {
-            showNotFound()
-        } finally {
-            document.getElementById("loader").style.display = "none"
-        }
-    }
-
-    function showNotFound() {
-        document.getElementById("loader").style.display = "none"
-        document.getElementById("not-found").style.display = "block"
-    }
-
-    function render(p) {
-        const el = document.getElementById("detail")
-        el.style.display = "block"
-        el.innerHTML = `
-            <a href="index.html" class="btn btn-secondary btn-sm" style="margin:1.5rem 0;display:inline-flex;">← Back to Shop</a>
-            <div class="product-detail">
-                <div class="product-detail-img">
-                    <img src="${productImg(p)}" alt="${p.name}" onerror="this.src='https://picsum.photos/seed/${p._id}/600/600'" />
-                </div>
-                <div class="product-detail-info">
-                    ${p.category ? `<span class="stock-badge in-stock" style="font-size:0.78rem">${p.category}</span>` : ""}
-                    <h1>${p.name}</h1>
-                    <div class="product-detail-price">${formatPrice(p.price)}</div>
-                    <p class="product-detail-desc">${p.description || "No description available."}</p>
-                    <div style="display:flex;align-items:center;gap:0.75rem;">
-                        <span class="stock-badge ${p.stock > 0 ? "in-stock" : "out-stock"}">
-                            ${p.stock > 0 ? `${p.stock} in stock` : "Out of stock"}
-                        </span>
-                    </div>
-                    <div class="qty-selector">
-                        <label>Quantity:</label>
-                        <div style="display:flex;align-items:center;gap:0.5rem;">
-                            <button class="qty-btn" onclick="changeQty(-1)">−</button>
-                            <span id="qty-val" class="qty-value">1</span>
-                            <button class="qty-btn" onclick="changeQty(1)">+</button>
+            <div id="product-content" style="display:none">
+                <div class="product-detail-grid">
+                    <!-- Image Gallery -->
+                    <div class="product-gallery">
+                        <div class="main-img-container">
+                            <img id="main-img" src="" alt="" />
                         </div>
                     </div>
-                    <div style="display:flex;gap:1rem;flex-wrap:wrap;">
-                        <button class="btn btn-primary btn-lg" onclick='addMultiple(${JSON.stringify(p)})' ${p.stock===0?"disabled":""}>
-                            🛒 Add to Cart
-                        </button>
-                        <a href="cart.html" class="btn btn-secondary btn-lg">View Cart</a>
+
+                    <!-- Info -->
+                    <div class="product-info-card">
+                        <div id="category-path" class="category-path"></div>
+                        <h1 id="product-name" class="product-title"></h1>
+                        
+                        <div class="rating-summary">
+                            <span id="stars"></span>
+                            <span id="review-count" class="text-muted"></span>
+                        </div>
+
+                        <div id="product-price" class="detail-price"></div>
+                        
+                        <div id="stock-status" class="stock-status"></div>
+
+                        <p id="product-desc" class="detail-desc"></p>
+
+                        <div class="purchase-actions">
+                            <div class="qty-selector">
+                                <button class="qty-btn" onclick="adjustQty(-1)">−</button>
+                                <input type="number" id="buy-qty" value="1" min="1" readonly />
+                                <button class="qty-btn" onclick="adjustQty(1)">+</button>
+                            </div>
+                            <button id="add-btn" class="btn btn-primary btn-lg">Add to Cart</button>
+                        </div>
                     </div>
                 </div>
-            </div>`
-    }
 
-    let qty = 1
-    function changeQty(d) {
-        qty = Math.max(1, qty + d)
-        document.getElementById("qty-val").textContent = qty
-    }
+                <!-- Tabs/Sections -->
+                <div class="detail-tabs">
+                    <div class="tab-header">
+                        <button class="tab-btn active">Reviews</button>
+                    </div>
+                    
+                    <div class="tab-content">
+                        <div class="review-section">
+                            <div class="review-header">
+                                <h3>Customer Reviews</h3>
+                                <button id="write-review-btn" class="btn btn-secondary btn-sm" onclick="toggleReviewForm()">Write a Review</button>
+                            </div>
 
-    function addMultiple(p) {
-        for (let i = 0; i < qty; i++) addToCart(p)
-    }
+                            <div id="review-form-container" class="review-form-card" style="display:none">
+                                <h4>Share your experience</h4>
+                                <form id="review-form" onsubmit="submitReview(event)">
+                                    <div class="form-group">
+                                        <label>Rating</label>
+                                        <div class="star-rating">
+                                            <input type="radio" name="rating" value="5" id="s5" checked><label for="s5">⭐</label>
+                                            <input type="radio" name="rating" value="4" id="s4"><label for="s4">⭐</label>
+                                            <input type="radio" name="rating" value="3" id="s3"><label for="s3">⭐</label>
+                                            <input type="radio" name="rating" value="2" id="s2"><label for="s2">⭐</label>
+                                            <input type="radio" name="rating" value="1" id="s1"><label for="s1">⭐</label>
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Comment</label>
+                                        <textarea id="review-comment" rows="3" placeholder="What did you think of this product?" required></textarea>
+                                    </div>
+                                    <button type="submit" id="submit-review-btn" class="btn btn-primary">Submit Review</button>
+                                </form>
+                            </div>
 
-    loadProduct()
-</script>
+                            <div id="reviews-list" class="reviews-list">
+                                <!-- Reviews injected here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recommendations -->
+                <section class="section">
+                    <h3 class="section-title">Recommended for You</h3>
+                    <div id="recommendations-grid" class="product-grid">
+                        <!-- Recs injected here -->
+                    </div>
+                </section>
+            </div>
+
+            <div id="error-content" class="empty-state" style="display:none">
+                <div class="empty-icon">❌</div>
+                <h3>Product not found</h3>
+                <p>The product you are looking for does not exist or has been removed.</p>
+                <a href="index.html" class="btn btn-primary">Back to Home</a>
+            </div>
+        </div>
+    </main>
+
+    <div id="toast"></div>
+    <script src="js/script.js"></script>
+    <script>
+        document.getElementById("navbar-root").innerHTML = navbar()
+        updateCartCount()
+
+        const urlParams = new URLSearchParams(window.location.search)
+        const productId = urlParams.get('id')
+        let currentProduct = null
+
+        if (!productId) {
+            window.location.href = "index.html"
+        }
+
+        async function init() {
+            try {
+                document.getElementById("loader").style.display = "flex"
+                
+                const res = await fetch(`${API}/api/products/${productId}`)
+                if (!res.ok) throw new Error("Product not found")
+                
+                const product = await res.json()
+                currentProduct = product
+                
+                renderProduct(product)
+                loadReviews()
+                loadRecommendations()
+            } catch (err) {
+                console.error(err)
+                document.getElementById("error-content").style.display = "block"
+            } finally {
+                document.getElementById("loader").style.display = "none"
+            }
+        }
+
+        function renderProduct(p) {
+            document.getElementById("product-content").style.display = "block"
+            document.title = `${p.name} – ShopVibe`
+            
+            document.getElementById("main-img").src = productImg(p)
+            document.getElementById("category-path").textContent = p.category || "General"
+            document.getElementById("product-name").textContent = p.name
+            document.getElementById("product-price").textContent = formatPrice(p.price)
+            document.getElementById("product-desc").textContent = p.description || "No description available."
+            
+            const starsEl = document.getElementById("stars")
+            starsEl.innerHTML = renderStars(p.rating)
+            document.getElementById("review-count").textContent = `(${p.numReviews || 0} reviews)`
+            
+            const stockEl = document.getElementById("stock-status")
+            if (p.stock > 0) {
+                stockEl.innerHTML = `<span class="in-stock">✓ In Stock</span> (${p.stock} units left)`
+                document.getElementById("add-btn").disabled = false
+            } else {
+                stockEl.innerHTML = `<span class="out-stock">✗ Out of Stock</span>`
+                document.getElementById("add-btn").disabled = true
+            }
+
+            document.getElementById("add-btn").onclick = () => {
+                const qty = parseInt(document.getElementById("buy-qty").value)
+                for(let i=0; i<qty; i++) {
+                    addToCart(p)
+                }
+            }
+        }
+
+        function renderStars(rating = 0) {
+            const fullStars = Math.floor(rating)
+            const halfStar = rating % 1 >= 0.5 ? 1 : 0
+            const emptyStars = 5 - fullStars - halfStar
+            return "⭐".repeat(fullStars) + (halfStar ? "✨" : "") + "☆".repeat(emptyStars)
+        }
+
+        function adjustQty(delta) {
+            const input = document.getElementById("buy-qty")
+            let val = parseInt(input.value) + delta
+            if (val < 1) val = 1
+            if (currentProduct && val > currentProduct.stock) val = currentProduct.stock
+            input.value = val
+        }
+
+        async function loadReviews() {
+            try {
+                const res = await fetch(`${API}/api/products/${productId}/reviews`)
+                const reviews = await res.json()
+                
+                const list = document.getElementById("reviews-list")
+                if (!reviews || reviews.length === 0) {
+                    list.innerHTML = `<p class="text-muted">No reviews yet. Be the first to review!</p>`
+                    return
+                }
+                
+                list.innerHTML = reviews.map(r => `
+                    <div class="review-card fade-in">
+                        <div class="review-user">
+                            <strong>${r.name || 'Anonymous'}</strong>
+                            <div class="review-stars">${"⭐".repeat(r.rating)}</div>
+                        </div>
+                        <p class="review-text">${r.comment}</p>
+                        <small class="text-muted">${new Date(r.createdAt || Date.now()).toLocaleDateString()}</small>
+                    </div>
+                `).join("")
+            } catch (err) {
+                console.error(err)
+            }
+        }
+
+        async function loadRecommendations() {
+            try {
+                const res = await fetch(`${API}/api/products/recommendations/${productId}`)
+                const products = await res.json()
+                
+                const grid = document.getElementById("recommendations-grid")
+                if (!products || products.length === 0) {
+                    grid.parentElement.style.display = "none"
+                    return
+                }
+                
+                grid.innerHTML = products.map(p => `
+                    <article class="card product-card small">
+                        <div class="product-img">
+                            <img src="${productImg(p)}" alt="${p.name}" />
+                        </div>
+                        <div class="product-body">
+                            <h4 class="product-name"><a href="product.html?id=${p._id}">${p.name}</a></h4>
+                            <div class="product-price">${formatPrice(p.price)}</div>
+                        </div>
+                    </article>`).join("")
+            } catch (err) {
+                console.error(err)
+            }
+        }
+
+        function toggleReviewForm() {
+            if (!isLoggedIn()) {
+                showToast("Please login to write a review", "error")
+                setTimeout(() => window.location.href = `login.html?redirect=product.html?id=${productId}`, 1500)
+                return
+            }
+            const form = document.getElementById("review-form-container")
+            form.style.display = form.style.display === "none" ? "block" : "none"
+        }
+
+        async function submitReview(e) {
+            e.preventDefault()
+            const rating = document.querySelector('input[name="rating"]:checked').value
+            const comment = document.getElementById("review-comment").value.trim()
+            
+            setLoading("submit-review-btn", true)
+            try {
+                const res = await fetch(`${API}/api/products/${productId}/review`, {
+                    method: "POST",
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ rating, comment })
+                })
+                const data = await res.json()
+                
+                if (!res.ok) throw new Error(data.message || "Failed to submit review")
+                
+                showToast("Review submitted successfully!", "success")
+                document.getElementById("review-form").reset()
+                document.getElementById("review-form-container").style.display = "none"
+                loadReviews()
+            } catch (err) {
+                showToast(err.message, "error")
+            } finally {
+                setLoading("submit-review-btn", false)
+            }
+        }
+
+        init()
+    </script>
 </body>
+
 </html>

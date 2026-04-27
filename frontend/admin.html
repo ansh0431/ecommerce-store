@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard – ShopVibe</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .admin-nav { display: flex; gap: 1rem; margin-bottom: 2rem; border-bottom: 1px solid var(--border); padding-bottom: 1rem; flex-wrap: wrap; }
+        .admin-tab { background: transparent; border: none; color: var(--text-muted); font-size: 1rem; cursor: pointer; padding: 0.5rem 1rem; border-radius: var(--radius-sm); transition: 0.2s; }
+        .admin-tab.active { background: var(--primary); color: #fff; font-weight: 600; }
+        .panel { display: none; }
+        .panel.active { display: block; animation: fade-in 0.3s ease; }
+        
+        .admin-table-container { overflow-x: auto; background: rgba(255,255,255,0.02); border-radius: var(--radius-md); border: 1px solid var(--border); }
+        table { width: 100%; border-collapse: collapse; font-size: 0.9rem; min-width: 600px; }
+        th, td { padding: 1rem; text-align: left; border-bottom: 1px solid var(--border); }
+        th { color: var(--text-secondary); font-weight: 600; background: rgba(255, 255, 255, 0.05); }
+        
+        .action-btns { display: flex; gap: 0.5rem; }
+        .status-pill { padding: 0.25rem 0.75rem; border-radius: 50px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; }
+        
+        .modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 10000; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
+        .modal.active { display: flex; }
+        .modal-content { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 2rem; width: 95%; max-width: 600px; max-height: 90vh; overflow-y: auto; position: relative; }
+        .modal-close { position: absolute; top: 1rem; right: 1rem; background: none; border: none; color: var(--text-muted); font-size: 1.5rem; cursor: pointer; }
+        
+        .stat-card { text-align: center; padding: 2rem; }
+        .stat-value { font-size: 2.5rem; color: var(--primary); font-weight: 800; margin: 0.5rem 0; }
+        .stat-label { color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; font-size: 0.8rem; }
+    </style>
+</head>
+
+<body>
+    <div id="navbar-root"></div>
+
+    <main class="main">
+        <div class="container section">
+            <div class="section-header">
+                <div>
+                    <h1 class="section-title">Admin Dashboard</h1>
+                    <p class="section-sub">Manage products, orders and view store analytics</p>
+                </div>
+            </div>
+            
+            <div class="admin-nav">
+                <button class="admin-tab active" onclick="switchTab('analytics', this)">Analytics</button>
+                <button class="admin-tab" onclick="switchTab('products', this)">Products</button>
+                <button class="admin-tab" onclick="switchTab('orders', this)">Orders</button>
+            </div>
+
+            <!-- Analytics Panel -->
+            <div id="panel-analytics" class="panel active">
+                <div class="grid-3" style="margin-bottom:2rem;">
+                    <div class="card stat-card">
+                        <div class="stat-label">Total Users</div>
+                        <div id="stat-users" class="stat-value">-</div>
+                    </div>
+                    <div class="card stat-card">
+                        <div class="stat-label">Total Orders</div>
+                        <div id="stat-orders" class="stat-value">-</div>
+                    </div>
+                    <div class="card stat-card">
+                        <div class="stat-label">Total Revenue</div>
+                        <div id="stat-revenue" class="stat-value">-</div>
+                    </div>
+                </div>
+                
+                <div class="grid-2">
+                    <div class="card">
+                        <h3>Top Selling Products</h3>
+                        <div class="admin-table-container" style="margin-top:1rem">
+                            <table>
+                                <thead><tr><th>Product Name</th><th>Units Sold</th></tr></thead>
+                                <tbody id="stat-top-products"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <h3>Recent Activity</h3>
+                        <p class="text-muted small">Store performance is 12% higher than last month.</p>
+                        <!-- Chart placeholder -->
+                        <div style="height:200px; display:flex; align-items:center; justify-content:center; background:rgba(255,255,255,0.02); border-radius:8px; margin-top:1rem">
+                            📊 [Sales Analytics Chart Placeholder]
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Products Panel -->
+            <div id="panel-products" class="panel">
+                <div class="section-header" style="margin-bottom:1.5rem">
+                    <h2>Inventory Management</h2>
+                    <button class="btn btn-primary btn-sm" onclick="openProductModal()">+ Add New Product</button>
+                </div>
+                <div class="admin-table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Product</th>
+                                <th>Category</th>
+                                <th>Price</th>
+                                <th>Stock</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="admin-products-list"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Orders Panel -->
+            <div id="panel-orders" class="panel">
+                <div class="section-header" style="margin-bottom:1.5rem">
+                    <h2>Order Fulfillment</h2>
+                    <div class="filter-mini">
+                        <select id="order-filter" class="btn-sm" style="background:var(--bg); border:1px solid var(--border); color:var(--text-primary);">
+                            <option value="all">All Status</option>
+                            <option value="pending">Pending</option>
+                            <option value="processing">Processing</option>
+                            <option value="shipped">Shipped</option>
+                            <option value="delivered">Delivered</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="admin-table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Order ID</th>
+                                <th>Customer</th>
+                                <th>Date</th>
+                                <th>Total</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="admin-orders-list"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Product Modal -->
+    <div id="product-modal" class="modal">
+        <div class="modal-content card">
+            <button class="modal-close" onclick="closeProductModal()">&times;</button>
+            <h2 id="modal-title">Add Product</h2>
+            <p class="text-muted small" style="margin-bottom:1.5rem">Provide product details for your store catalog.</p>
+            
+            <form id="product-form" onsubmit="saveProduct(event)">
+                <input type="hidden" id="prod-id" />
+                <div class="form-group">
+                    <label>Product Name</label>
+                    <input id="prod-name" type="text" placeholder="e.g. Premium Wireless Headphones" required />
+                </div>
+                
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Price (₹)</label>
+                        <input id="prod-price" type="number" min="0" placeholder="0" required />
+                    </div>
+                    <div class="form-group">
+                        <label>Stock Quantity</label>
+                        <input id="prod-stock" type="number" min="0" placeholder="0" required />
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Category</label>
+                    <input id="prod-cat" type="text" placeholder="e.g. Electronics, Fashion" required />
+                </div>
+
+                <div class="form-group">
+                    <label>Product Image URL</label>
+                    <input id="prod-img" type="url" placeholder="https://images.com/product.jpg" required />
+                    <small class="text-muted">Use high-quality images for better conversion.</small>
+                </div>
+
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea id="prod-desc" rows="4" placeholder="Describe the product features and benefits..."></textarea>
+                </div>
+
+                <div class="form-actions" style="margin-top:1.5rem">
+                    <button type="submit" id="save-prod-btn" class="btn btn-primary btn-full">Save to Inventory</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Order Status Modal -->
+    <div id="order-modal" class="modal">
+        <div class="modal-content card" style="max-width:400px;">
+            <button class="modal-close" onclick="closeOrderModal()">&times;</button>
+            <h3>Update Order Status</h3>
+            <p id="update-order-info" class="small text-muted" style="margin-bottom:1.5rem"></p>
+            
+            <form id="order-form" onsubmit="saveOrderStatus(event)">
+                <input type="hidden" id="order-update-id" />
+                <div class="form-group">
+                    <label>New Status</label>
+                    <select id="order-status-select" class="btn-full" style="padding:0.75rem; background:var(--bg); color:var(--text-primary); border:1px solid var(--border); border-radius:8px;">
+                        <option value="pending">Pending</option>
+                        <option value="processing">Processing</option>
+                        <option value="shipped">Shipped</option>
+                        <option value="delivered">Delivered</option>
+                        <option value="cancelled">Cancelled</option>
+                    </select>
+                </div>
+                <div class="form-actions" style="margin-top:1.5rem">
+                    <button type="submit" id="update-status-btn" class="btn btn-primary btn-full">Confirm Update</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="toast"></div>
+    <script src="js/script.js"></script>
+    <script>
+        document.getElementById("navbar-root").innerHTML = navbar("admin")
+        updateCartCount()
+
+        const user = getUser()
+        if (!user || user.role !== "admin") {
+            window.location.href = "index.html"
+        }
+
+        function switchTab(tab, btn) {
+            document.querySelectorAll('.admin-tab').forEach(b => b.classList.remove('active'))
+            document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'))
+            btn.classList.add('active')
+            document.getElementById(`panel-${tab}`).classList.add('active')
+            
+            if (tab === 'analytics') loadAnalytics()
+            else if (tab === 'products') loadAdminProducts()
+            else if (tab === 'orders') loadAdminOrders()
+        }
+
+        // --- Analytics ---
+        async function loadAnalytics() {
+            try {
+                const res = await fetch(`${API}/api/admin/stats`, {
+                    headers: getAuthHeaders()
+                })
+                const data = await res.json()
+                document.getElementById("stat-users").textContent = data.totalUsers || 0
+                document.getElementById("stat-orders").textContent = data.totalOrders || 0
+                document.getElementById("stat-revenue").textContent = formatPrice(data.totalRevenue || 0)
+                
+                const topList = document.getElementById("stat-top-products")
+                if (!data.topSellingProducts || data.topSellingProducts.length === 0) {
+                    topList.innerHTML = `<tr><td colspan="2" class="text-center">No sales data yet</td></tr>`
+                } else {
+                    topList.innerHTML = data.topSellingProducts.map(p => 
+                        `<tr><td>${p.name}</td><td><strong>${p.sold}</strong></td></tr>`
+                    ).join("")
+                }
+            } catch (err) {
+                console.error(err)
+            }
+        }
+
+        // --- Products Management ---
+        let adminProducts = []
+
+        async function loadAdminProducts() {
+            try {
+                const res = await fetch(`${API}/api/products?limit=100`)
+                const data = await res.json()
+                adminProducts = data.products || []
+                
+                const list = document.getElementById("admin-products-list")
+                if (adminProducts.length === 0) {
+                    list.innerHTML = `<tr><td colspan="5" class="text-center">No products in inventory</td></tr>`
+                    return
+                }
+
+                list.innerHTML = adminProducts.map(p => `
+                    <tr>
+                        <td>
+                            <div style="display:flex; align-items:center; gap:0.75rem">
+                                <img src="${productImg(p)}" width="40" height="40" style="border-radius:4px; object-fit:cover" />
+                                <div>
+                                    <div style="font-weight:600">${p.name}</div>
+                                    <small class="text-muted">${p._id}</small>
+                                </div>
+                            </div>
+                        </td>
+                        <td><span class="category-tag">${p.category || '-'}</span></td>
+                        <td>${formatPrice(p.price)}</td>
+                        <td>
+                            <span class="${p.stock > 10 ? 'text-success' : 'text-danger'}" style="font-weight:700">
+                                ${p.stock}
+                            </span>
+                        </td>
+                        <td class="action-btns">
+                            <button class="btn btn-secondary btn-sm" onclick="openProductModal('${p._id}')">Edit</button>
+                            <button class="btn btn-text-danger btn-sm" onclick="deleteProduct('${p._id}')">Delete</button>
+                        </td>
+                    </tr>
+                `).join("")
+            } catch (err) {
+                console.error(err)
+                showToast("Failed to load products", "error")
+            }
+        }
+
+        function openProductModal(id = null) {
+            const form = document.getElementById("product-form")
+            form.reset()
+            document.getElementById("prod-id").value = ""
+            document.getElementById("modal-title").textContent = "Add Product"
+            
+            if (id) {
+                const p = adminProducts.find(x => x._id === id)
+                if (p) {
+                    document.getElementById("prod-id").value = p._id
+                    document.getElementById("prod-name").value = p.name
+                    document.getElementById("prod-price").value = p.price
+                    document.getElementById("prod-stock").value = p.stock || 0
+                    document.getElementById("prod-cat").value = p.category || ""
+                    document.getElementById("prod-img").value = p.image || ""
+                    document.getElementById("prod-desc").value = p.description || ""
+                    document.getElementById("modal-title").textContent = "Edit Product"
+                }
+            }
+            document.getElementById("product-modal").classList.add("active")
+        }
+
+        function closeProductModal() {
+            document.getElementById("product-modal").classList.remove("active")
+        }
+
+        async function saveProduct(e) {
+            e.preventDefault()
+            const id = document.getElementById("prod-id").value
+            
+            const payload = {
+                name: document.getElementById("prod-name").value,
+                price: Number(document.getElementById("prod-price").value),
+                stock: Number(document.getElementById("prod-stock").value),
+                category: document.getElementById("prod-cat").value,
+                image: document.getElementById("prod-img").value,
+                description: document.getElementById("prod-desc").value
+            }
+
+            const method = id ? "PUT" : "POST"
+            const url = id ? `${API}/api/products/${id}` : `${API}/api/products`
+
+            setLoading("save-prod-btn", true)
+            try {
+                const res = await fetch(url, {
+                    method,
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify(payload)
+                })
+                const data = await res.json()
+                
+                if (!res.ok) throw new Error(data.message || "Failed to save product")
+                
+                showToast(id ? "Product updated!" : "Product added to inventory!", "success")
+                closeProductModal()
+                loadAdminProducts()
+            } catch (err) {
+                showToast(err.message, "error")
+            } finally {
+                setLoading("save-prod-btn", false)
+            }
+        }
+
+        async function deleteProduct(id) {
+            if (!confirm("Are you sure you want to delete this product? This cannot be undone.")) return
+            
+            try {
+                const res = await fetch(`${API}/api/products/${id}`, {
+                    method: "DELETE",
+                    headers: getAuthHeaders()
+                })
+                if (!res.ok) throw new Error("Failed to delete")
+                showToast("Product permanently removed", "success")
+                loadAdminProducts()
+            } catch (err) {
+                showToast(err.message, "error")
+            }
+        }
+
+        // --- Orders Management ---
+        let adminOrders = []
+
+        async function loadAdminOrders() {
+            try {
+                const res = await fetch(`${API}/api/orders/admin`, {
+                    headers: getAuthHeaders()
+                })
+                if (!res.ok) throw new Error("Failed to load orders")
+                
+                adminOrders = await res.json()
+                renderAdminOrders(adminOrders)
+            } catch (err) {
+                console.error(err)
+                showToast("Failed to load orders", "error")
+            }
+        }
+
+        function renderAdminOrders(orders) {
+            const list = document.getElementById("admin-orders-list")
+            if (orders.length === 0) {
+                list.innerHTML = `<tr><td colspan="6" class="text-center">No orders found</td></tr>`
+                return
+            }
+
+            list.innerHTML = orders.map(o => `
+                <tr>
+                    <td style="font-family:monospace">#${o._id.substring(0,8)}...</td>
+                    <td>
+                        <strong>${o.userId?.name || 'Customer'}</strong><br>
+                        <small class="text-muted">${o.userId?.email || ''}</small>
+                    </td>
+                    <td>${new Date(o.createdAt).toLocaleDateString()}</td>
+                    <td>${formatPrice(o.totalPrice)}</td>
+                    <td><span class="status-pill status-${o.status.toLowerCase()}">${o.status}</span></td>
+                    <td>
+                        <button class="btn btn-secondary btn-sm" onclick="openOrderModal('${o._id}', '${o.status}', '${o.userId?.name}')">Update Status</button>
+                    </td>
+                </tr>
+            `).join("")
+        }
+
+        function openOrderModal(id, status, name) {
+            document.getElementById("order-update-id").value = id
+            document.getElementById("order-status-select").value = status
+            document.getElementById("update-order-info").textContent = `Updating status for order #${id} by ${name}`
+            document.getElementById("order-modal").classList.add("active")
+        }
+
+        function closeOrderModal() {
+            document.getElementById("order-modal").classList.remove("active")
+        }
+
+        async function saveOrderStatus(e) {
+            e.preventDefault()
+            const id = document.getElementById("order-update-id").value
+            const status = document.getElementById("order-status-select").value
+            
+            setLoading("update-status-btn", true)
+            try {
+                const res = await fetch(`${API}/api/orders/${id}/status`, {
+                    method: "PUT",
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ status })
+                })
+                if (!res.ok) throw new Error("Failed to update status")
+                
+                showToast("Order status successfully updated!", "success")
+                closeOrderModal()
+                loadAdminOrders()
+            } catch (err) {
+                showToast(err.message, "error")
+            } finally {
+                setLoading("update-status-btn", false)
+            }
+        }
+
+        // Init
+        loadAnalytics()
+    </script>
+</body>
+
+</html>

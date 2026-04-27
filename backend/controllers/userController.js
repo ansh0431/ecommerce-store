@@ -51,4 +51,43 @@ const login = async (req, res, next) => {
     }
 }
 
-module.exports = { register, login }
+// GET /api/users/profile
+const getProfile = async (req, res, next) => {
+    try {
+        const user = await User.findById(req.user.id)
+        if (!user) {
+            return res.status(404).json({ message: "User not found" })
+        }
+        res.json(user)
+    } catch (error) {
+        next(error)
+    }
+}
+
+// PUT /api/users/profile
+const updateProfile = async (req, res, next) => {
+    try {
+        const { name, phone, address, pincode } = req.body
+        const user = await User.findById(req.user.id)
+        
+        if (!user) {
+            return res.status(404).json({ message: "User not found" })
+        }
+
+        if (name) user.name = name
+        if (phone !== undefined) user.phone = phone
+        if (address !== undefined) user.address = address
+        if (pincode !== undefined) user.pincode = pincode
+
+        await user.save()
+        res.json(user)
+    } catch (error) {
+        if (error.name === "ValidationError") {
+            const messages = Object.values(error.errors).map(val => val.message)
+            return res.status(400).json({ message: messages.join(", ") })
+        }
+        next(error)
+    }
+}
+
+module.exports = { register, login, getProfile, updateProfile }

@@ -30,6 +30,30 @@ const userSchema = new mongoose.Schema(
             type: String,
             enum: ["user", "admin"],
             default: "user"
+        },
+        phone: {
+            type: String,
+            trim: true,
+            validate: {
+                validator: function(v) {
+                    return !v || /^[6-9]\d{9}$/.test(v);
+                },
+                message: "Phone number must be a valid 10-digit Indian number"
+            }
+        },
+        address: {
+            type: String,
+            trim: true
+        },
+        pincode: {
+            type: String,
+            trim: true,
+            validate: {
+                validator: function(v) {
+                    return !v || /^\d{6}$/.test(v);
+                },
+                message: "Pincode must be a 6-digit number"
+            }
         }
     },
     { timestamps: true }

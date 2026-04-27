@@ -1,10 +1,11 @@
 const Order = require("../models/Order")
 const Product = require("../models/Product")
+const sendEmail = require("../utils/sendEmail")
 
 // POST /api/orders — protected
 const createOrder = async (req, res, next) => {
     try {
-        const { products, totalPrice } = req.body
+        const { products, totalPrice, shippingAddress } = req.body
 
         // Server-side totalPrice verification — never trust client
         const productIds = products.map(p => p.productId)
@@ -41,7 +42,31 @@ const createOrder = async (req, res, next) => {
             userId: req.user.id,
             products,
             totalPrice: calculatedTotal,
+            shippingAddress,
             status: "pending"
+        })
+
+        // Build HTML email
+        let itemsHtml = products.map(item => {
+            const dbProd = dbProducts.find(p => p._id.toString() === item.productId)
+            return `<li>${dbProd.name} (x${item.quantity}) - ₹${dbProd.price * item.quantity}</li>`
+        }).join("")
+
+        const emailHtml = `
+            <h2>Order Confirmation</h2>
+            <p>Thank you for your order, ${req.user.name || "Customer"}!</p>
+            <p><strong>Order ID:</strong> ${order._id}</p>
+            <p><strong>Total Price:</strong> ₹${calculatedTotal}</p>
+            <h3>Products Purchased:</h3>
+            <ul>${itemsHtml}</ul>
+            <p>We'll notify you once it's shipped.</p>
+        `
+
+        // Send email (don't await to avoid blocking response, or await if you want to ensure delivery)
+        sendEmail({
+            email: req.user.email,
+            subject: "ShopVibe - Order Confirmation",
+            html: emailHtml
         })
 
         res.status(201).json(order)
@@ -53,6 +78,9 @@ const createOrder = async (req, res, next) => {
 // GET /api/orders — all orders (admin)
 const getAllOrders = async (req, res, next) => {
     try {
+        if (req.user.role !== "admin") {
+            return res.status(403).json({ message: "Admin access required" })
+        }
         const orders = await Order.find()
             .populate("products.productId", "name price image")
             .populate("userId", "name email")
@@ -80,4 +108,35 @@ const getOrdersByUser = async (req, res, next) => {
     }
 }
 
-module.exports = { createOrder, getAllOrders, getOrdersByUser }
+const getMyOrders = async (req, res, next) => {
+    try {
+        const orders = await Order.find({ userId: req.user.id })
+            .populate("products.productId", "name price image")
+            .sort({ createdAt: -1 })
+            .lean()
+        res.json(orders)
+    } catch (error) {
+        next(error)
+    }
+}
+
+// PUT /api/orders/:id — admin update order status
+const updateOrderStatus = async (req, res, next) => {
+    try {
+        if (req.user.role !== "admin") {
+            return res.status(403).json({ message: "Admin access required" })
+        }
+
+        const { status } = req.body
+        const order = await Order.findById(req.params.id)
+        if (!order) return res.status(404).json({ message: "Order not found" })
+
+        order.status = status
+        await order.save()
+        res.json(order)
+    } catch (error) {
+        next(error)
+    }
+}
+
+module.exports = { createOrder, getAllOrders, getOrdersByUser, getMyOrders, updateOrderStatus }

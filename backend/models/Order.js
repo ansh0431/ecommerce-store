@@ -33,6 +33,10 @@ const orderSchema = new mongoose.Schema(
             required: [true, "Total price is required"],
             min: [0, "Total price cannot be negative"]
         },
+        shippingAddress: {
+            type: String,
+            required: [true, "Shipping address is required"]
+        },
         status: {
             type: String,
             enum: {

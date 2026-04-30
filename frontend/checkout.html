@@ -39,7 +39,7 @@
                             <h3>Shipping Details</h3>
                             <span class="text-muted small">All fields are required</span>
                         </div>
-                        
+
                         <div id="checkout-alert" class="alert" style="display:none"></div>
 
                         <form id="checkout-form">
@@ -63,7 +63,8 @@
 
                             <div class="form-group">
                                 <label>Delivery Address</label>
-                                <textarea id="address" rows="3" placeholder="Street, Landmark, City, State" required></textarea>
+                                <textarea id="address" rows="3" placeholder="Street, Landmark, City, State"
+                                    required></textarea>
                             </div>
                         </form>
                     </div>
@@ -101,7 +102,7 @@
                         <button id="place-order-btn" class="btn btn-primary btn-full btn-lg" onclick="placeOrder()">
                             Place Order 🎉
                         </button>
-                        
+
                         <p class="text-muted small text-center" style="margin-top:1rem">
                             By placing an order, you agree to our Terms of Service.
                         </p>
@@ -141,7 +142,7 @@
             }
 
             document.getElementById("checkout-content").style.display = "grid"
-            
+
             // Auto-fill from profile
             const user = getUser()
             if (user) {
@@ -259,9 +260,7 @@
                         name: name,
                         contact: phone
                     },
-                    theme: {
-                        color: "#6366f1"
-                    }
+                    theme: { color: "#fb641b" }
                 }
 
                 const rzp = new Razorpay(options)

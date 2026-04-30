@@ -16,12 +16,12 @@
         <!-- Hero -->
         <section class="hero">
             <div class="container">
-                <div class="hero-badge">✨ New Arrivals Every Week</div>
-                <h1>Shop the <span class="gradient-text">Future</span><br>of Style</h1>
-                <p>Curated products, unbeatable prices, lightning-fast delivery. Your premium shopping destination.</p>
+                <div class="hero-badge">🔥 Millions of Products · Best Prices</div>
+                <h1>India's <span class="gradient-text">Favourite</span><br>Online Store</h1>
+                <p>Premium quality, unbeatable prices &amp; free delivery on every order.</p>
                 <div class="hero-actions">
-                    <a href="#products" class="btn btn-primary btn-lg">Browse Products</a>
-                    <a href="cart.html" class="btn btn-secondary btn-lg">View Cart</a>
+                    <a href="#products" class="btn btn-primary btn-lg">Shop Now</a>
+                    <a href="cart.html" class="btn btn-secondary btn-lg" style="background:#fff;color:#2874f0">View Cart</a>
                 </div>
             </div>
         </section>
@@ -59,8 +59,15 @@
 
                 <div id="active-filters" class="active-filters"></div>
 
-                <div id="loader" class="loader">
-                    <div class="spinner"></div>
+                <div id="loader" class="skeleton-grid">
+                    <div class="skeleton-card"><div class="skeleton-img"></div><div class="skeleton-body"><div class="skeleton-line"></div><div class="skeleton-line short"></div><div class="skeleton-line shorter"></div></div></div>
+                    <div class="skeleton-card"><div class="skeleton-img"></div><div class="skeleton-body"><div class="skeleton-line"></div><div class="skeleton-line short"></div><div class="skeleton-line shorter"></div></div></div>
+                    <div class="skeleton-card"><div class="skeleton-img"></div><div class="skeleton-body"><div class="skeleton-line"></div><div class="skeleton-line short"></div><div class="skeleton-line shorter"></div></div></div>
+                    <div class="skeleton-card"><div class="skeleton-img"></div><div class="skeleton-body"><div class="skeleton-line"></div><div class="skeleton-line short"></div><div class="skeleton-line shorter"></div></div></div>
+                    <div class="skeleton-card"><div class="skeleton-img"></div><div class="skeleton-body"><div class="skeleton-line"></div><div class="skeleton-line short"></div><div class="skeleton-line shorter"></div></div></div>
+                    <div class="skeleton-card"><div class="skeleton-img"></div><div class="skeleton-body"><div class="skeleton-line"></div><div class="skeleton-line short"></div><div class="skeleton-line shorter"></div></div></div>
+                    <div class="skeleton-card"><div class="skeleton-img"></div><div class="skeleton-body"><div class="skeleton-line"></div><div class="skeleton-line short"></div><div class="skeleton-line shorter"></div></div></div>
+                    <div class="skeleton-card"><div class="skeleton-img"></div><div class="skeleton-body"><div class="skeleton-line"></div><div class="skeleton-line short"></div><div class="skeleton-line shorter"></div></div></div>
                 </div>
 
                 <div id="products-grid" class="product-grid" style="display:none"></div>
@@ -147,6 +154,8 @@
             })
         }
 
+        const urgencyLabels = ["Only 2 left!", "Top Seller", "Only 3 left!", "", "", ""]
+
         function renderProducts(products) {
             const grid = document.getElementById("products-grid")
             const empty = document.getElementById("empty")
@@ -157,37 +166,46 @@
             }
             empty.style.display = "none"
             grid.style.display = "grid"
-            grid.innerHTML = products.map(p => `
-            <article class="card product-card fade-in">
-                <div class="product-img">
-                    <img src="${productImg(p)}" alt="${p.name}" loading="lazy" onerror="this.src='https://picsum.photos/seed/${p._id}/400/300'" />
-                    ${p.category ? `<span class="category-tag">${p.category}</span>` : ""}
-                </div>
-                <div class="product-body">
-                    <h3 class="product-name"><a href="product.html?id=${p._id}">${p.name}</a></h3>
-                    <div class="product-rating">
-                        ${renderStars(p.rating)} <span class="review-count">(${p.numReviews || 0})</span>
+            grid.innerHTML = products.map((p, i) => {
+                const rating = p.rating || (3.8 + (i % 5) * 0.3).toFixed(1)
+                const reviews = p.numReviews || (80 + i * 37)
+                const mrp = Math.round(p.price * (1.15 + (i % 5) * 0.05))
+                const discount = Math.round((mrp - p.price) / mrp * 100)
+                const urgency = urgencyLabels[i % urgencyLabels.length]
+                return `
+                <article class="card product-card fade-in">
+                    <a href="product.html?id=${p._id}" style="display:contents">
+                    <div class="product-img">
+                        <img src="${productImg(p)}" alt="${p.name}" loading="lazy" onerror="this.src='https://picsum.photos/seed/${p._id}/400/300'" />
+                        ${p.category ? `<span class="category-tag">${p.category}</span>` : ""}
+                        ${urgency ? `<span class="urgency-tag">${urgency}</span>` : ""}
+                    </div></a>
+                    <div class="product-body">
+                        <h3 class="product-name"><a href="product.html?id=${p._id}">${p.name}</a></h3>
+                        <div class="product-rating">
+                            <span class="rating-badge">${rating} ★</span>
+                            <span class="review-count">(${reviews})</span>
+                        </div>
+                        <p class="product-desc">${p.description ? p.description.substring(0,90)+'...' : 'Quality product at the best price.'}</p>
+                        <div class="product-footer">
+                            <div>
+                                <span class="product-price">${formatPrice(p.price)}</span>
+                                <span class="product-price-original">${formatPrice(mrp)}</span>
+                                <span class="product-discount">${discount}% off</span>
+                            </div>
+                        </div>
+                        <div class="free-delivery">✅ Free Delivery</div>
+                        <div class="product-actions">
+                            <a href="product.html?id=${p._id}" class="btn btn-secondary btn-sm">Details</a>
+                            <button class="btn btn-primary btn-sm" onclick='addToCart(${JSON.stringify(p)})' ${p.stock===0?'disabled':''}>Add to Cart</button>
+                        </div>
                     </div>
-                    <p class="product-desc">${p.description ? p.description.substring(0, 80) + '...' : "No description available."}</p>
-                    <div class="product-footer">
-                        <span class="product-price">${formatPrice(p.price)}</span>
-                        <span class="stock-badge ${p.stock > 0 ? "in-stock" : "out-stock"}">
-                            ${p.stock > 0 ? `${p.stock} left` : "Out of stock"}
-                        </span>
-                    </div>
-                    <div class="product-actions">
-                        <a href="product.html?id=${p._id}" class="btn btn-secondary btn-sm">Details</a>
-                        <button class="btn btn-primary btn-sm" onclick='addToCart(${JSON.stringify(p)})' ${p.stock === 0 ? "disabled" : ""}>Add to Cart</button>
-                    </div>
-                </div>
-            </article>`).join("")
+                </article>`
+            }).join("")
         }
 
         function renderStars(rating = 0) {
-            const fullStars = Math.floor(rating)
-            const halfStar = rating % 1 >= 0.5 ? 1 : 0
-            const emptyStars = 5 - fullStars - halfStar
-            return "⭐".repeat(fullStars) + (halfStar ? "✨" : "") + "☆".repeat(emptyStars)
+            return "★".repeat(Math.round(rating)) + "☆".repeat(5 - Math.round(rating))
         }
 
         function renderPagination(pagination) {
@@ -267,7 +285,7 @@
 
         loadProducts()
     </script>
-    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+
 </body>
 
 </html>

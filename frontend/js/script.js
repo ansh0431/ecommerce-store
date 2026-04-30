@@ -1,4 +1,4 @@
-const API = "https://ecommerce-store-ju5z.onrender.com"
+const API = "http://localhost:5000";
 
 // ── Auth ──
 const getToken = () => localStorage.getItem("token")
@@ -19,24 +19,24 @@ const getAuthHeaders = () => {
 
 // ── Cart ──
 const getCart = () => JSON.parse(localStorage.getItem("cart") || "[]")
-const saveCart = (cart) => { 
+const saveCart = (cart) => {
     localStorage.setItem("cart", JSON.stringify(cart))
-    updateCartCount() 
+    updateCartCount()
 }
 
 function addToCart(product) {
     const cart = getCart()
     const idx = cart.findIndex(i => i._id === product._id)
-    if (idx > -1) { 
-        cart[idx].qty = (cart[idx].qty || 1) + 1 
-    } else { 
-        cart.push({ 
+    if (idx > -1) {
+        cart[idx].qty = (cart[idx].qty || 1) + 1
+    } else {
+        cart.push({
             _id: product._id,
             name: product.name,
             price: product.price,
             image: product.image,
-            qty: 1 
-        }) 
+            qty: 1
+        })
     }
     saveCart(cart)
     showToast(`"${product.name}" added to cart ✓`, "success")
@@ -71,9 +71,9 @@ function updateCartCount() {
     const el = document.getElementById("cart-count")
     const el2 = document.getElementById("cart-count2")
     const n = getCartCount()
-    if (el) { 
+    if (el) {
         el.textContent = n
-        el.style.display = n ? "flex" : "none" 
+        el.style.display = n ? "flex" : "none"
     }
     if (el2) {
         el2.textContent = n
@@ -83,10 +83,10 @@ function updateCartCount() {
 
 function showToast(msg, type = "success") {
     let t = document.getElementById("toast")
-    if (!t) { 
+    if (!t) {
         t = document.createElement("div")
         t.id = "toast"
-        document.body.appendChild(t) 
+        document.body.appendChild(t)
     }
     t.textContent = msg
     t.className = `show ${type}`
@@ -110,12 +110,12 @@ function setLoading(btnId, loading) {
     btn.innerHTML = loading ? `<div class="spinner-sm"></div>` : btn.dataset.orig
 }
 
-function formatPrice(n) { 
+function formatPrice(n) {
     return new Intl.NumberFormat('en-IN', {
         style: 'currency',
         currency: 'INR',
         maximumFractionDigits: 0
-    }).format(n) 
+    }).format(n)
 }
 
 function productImg(p) {
@@ -146,10 +146,10 @@ function navbar(active = "") {
                     </a>
                 </li>
                 ${user
-                    ? `<li><a href="#" onclick="logout()">Logout</a></li>`
-                    : `<li><a href="login.html" class="${active === "login" ? "active" : ""}">Login</a></li>
+            ? `<li><a href="#" onclick="logout()">Logout</a></li>`
+            : `<li><a href="login.html" class="${active === "login" ? "active" : ""}">Login</a></li>
                        <li><a href="register.html" class="btn btn-primary btn-sm">Sign Up</a></li>`
-                }
+        }
             </ul>
         </div>
     </nav>`
@@ -206,7 +206,6 @@ function initChatbot() {
             </form>
         </div>
     </div>`
-    document.body.insertAdjacentHTML('beforeend', html)
 
     let sessionId = localStorage.getItem('chatSession')
     if (!sessionId) {
@@ -229,7 +228,7 @@ function initChatbot() {
             e.preventDefault()
             const text = input.value.trim()
             if (!text) return
-            
+
             // Add user msg
             msgs.innerHTML += `<div style="align-self:flex-end;background:var(--primary);color:#fff;padding:0.75rem 1rem;border-radius:1rem;max-width:80%;">${text}</div>`
             input.value = ''
@@ -242,7 +241,7 @@ function initChatbot() {
                     body: JSON.stringify({ message: text, sessionId })
                 })
                 const data = await res.json()
-                
+
                 // Add bot msg
                 msgs.innerHTML += `<div style="align-self:flex-start;background:rgba(255,255,255,0.05);padding:0.75rem 1rem;border-radius:1rem;max-width:80%;">${data.reply}</div>`
                 msgs.scrollTop = msgs.scrollHeight
@@ -251,4 +250,41 @@ function initChatbot() {
             }
         })
     }
+}
+async function checkout(amount) {
+    // 1. Get Order ID from Backend
+    const response = await fetch(`${API}/api/payment/create-order`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount })
+    });
+    const order = await response.json();
+
+    // 2. Configure Razorpay Options
+    const options = {
+        key: "YOUR_RAZORPAY_KEY_ID", // PASTE YOUR KEY ID HERE
+        amount: order.amount,
+        currency: "INR",
+        name: "ShopVibe Store",
+        description: "Test Transaction",
+        order_id: order.id,
+        handler: async function (response) {
+            // 3. Send payment details to backend for verification
+            const verifyRes = await fetch(`${API}/api/payment/verify`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(response)
+            });
+            const result = await verifyRes.json();
+
+            if (verifyRes.ok) {
+                alert("Payment Successful! Order Placed.");
+                // Optional: Clear cart and redirect to home
+            }
+        },
+        theme: { color: "#3399cc" }
+    };
+
+    const rzp1 = new Razorpay(options);
+    rzp1.open();
 }

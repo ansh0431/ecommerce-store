@@ -5,7 +5,7 @@ const jwt = require("jsonwebtoken")
 // POST /api/users/register
 const register = async (req, res, next) => {
     try {
-        const { name, email, password } = req.body
+        const { name, email, password, phone, pincode } = req.body
 
         const exists = await User.findOne({ email })
         if (exists) {
@@ -13,7 +13,13 @@ const register = async (req, res, next) => {
         }
 
         const hashedPassword = await bcrypt.hash(password, 12)
-        const user = await User.create({ name, email, password: hashedPassword })
+        const user = await User.create({
+            name,
+            email,
+            password: hashedPassword,
+            phone: phone || "",
+            pincode: pincode || ""
+        })
 
         res.status(201).json({ message: "Account created successfully", user })
     } catch (error) {
@@ -52,32 +58,39 @@ const login = async (req, res, next) => {
 }
 
 // GET /api/users/profile
-const getProfile = async (req, res, next) => {
+const getUserProfile = async (req, res, next) => {
     try {
         const user = await User.findById(req.user.id)
         if (!user) {
             return res.status(404).json({ message: "User not found" })
         }
-        res.json(user)
+
+        // Ensure phone, address, and pincode have fallback values
+        const userObj = user.toJSON()
+        if (userObj.phone === undefined) userObj.phone = ""
+        if (userObj.address === undefined) userObj.address = ""
+        if (userObj.pincode === undefined) userObj.pincode = ""
+
+        res.json(userObj)
     } catch (error) {
         next(error)
     }
 }
 
 // PUT /api/users/profile
-const updateProfile = async (req, res, next) => {
+const updateUserProfile = async (req, res, next) => {
     try {
         const { name, phone, address, pincode } = req.body
         const user = await User.findById(req.user.id)
-        
+
         if (!user) {
             return res.status(404).json({ message: "User not found" })
         }
 
         if (name) user.name = name
-        if (phone !== undefined) user.phone = phone
-        if (address !== undefined) user.address = address
-        if (pincode !== undefined) user.pincode = pincode
+        if (phone) user.phone = phone
+        if (pincode) user.pincode = pincode
+        if (address) user.address = address
 
         await user.save()
         res.json(user)
@@ -90,4 +103,5 @@ const updateProfile = async (req, res, next) => {
     }
 }
 
-module.exports = { register, login, getProfile, updateProfile }
+// Single, clean export at the bottom
+module.exports = { register, login, getUserProfile, updateUserProfile }

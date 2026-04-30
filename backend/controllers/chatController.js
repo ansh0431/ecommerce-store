@@ -5,14 +5,14 @@ const handleChat = async (req, res, next) => {
     try {
         const { message, sessionId } = req.body
         if (!message) return res.status(400).json({ reply: "Please send a message." })
-        
+
         const id = sessionId || Date.now().toString()
         const history = chatHistory.get(id) || []
         history.push({ role: "user", content: message })
-        
+
         let reply = "I am an AI assistant for ShopVibe. How can I help you today?"
         const lowerMsg = message.toLowerCase()
-        
+
         if (lowerMsg.includes("shipping") || lowerMsg.includes("delivery")) {
             reply = "We offer free delivery on all orders! Shipping usually takes 3-5 business days."
         } else if (lowerMsg.includes("return") || lowerMsg.includes("refund")) {

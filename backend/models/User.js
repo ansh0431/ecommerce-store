@@ -33,27 +33,15 @@ const userSchema = new mongoose.Schema(
         },
         phone: {
             type: String,
-            trim: true,
-            validate: {
-                validator: function(v) {
-                    return !v || /^[6-9]\d{9}$/.test(v);
-                },
-                message: "Phone number must be a valid 10-digit Indian number"
-            }
-        },
-        address: {
-            type: String,
-            trim: true
+            default: ""
         },
         pincode: {
             type: String,
-            trim: true,
-            validate: {
-                validator: function(v) {
-                    return !v || /^\d{6}$/.test(v);
-                },
-                message: "Pincode must be a 6-digit number"
-            }
+            default: ""
+        },
+        address: {
+            type: String,
+            default: ""
         }
     },
     { timestamps: true }

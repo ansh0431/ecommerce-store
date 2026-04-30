@@ -1,29 +1,27 @@
-console.log("TEST SCRIPT STARTED")
-const fetch = require("node-fetch")
-
-const API = "https://ecommerce-store-ju5z.onrender.com"
+const BASE = "http://localhost:5000"
 
 let token = null
 let productId = null
 let productPrice = 0
 
-// -----------------------------
-// Test server
-// -----------------------------
+console.log("TEST SCRIPT STARTED")
+
+// ----------------------------
+// SERVER TEST
+// ----------------------------
 async function testServer() {
   console.log("\n🔍 Testing server...")
 
-  const res = await fetch(API)
+  const res = await fetch(BASE)
   const text = await res.text()
 
   console.log("Server response:", text)
 }
 
-// -----------------------------
-// Test frontend pages
-// -----------------------------
+// ----------------------------
+// FRONTEND TEST
+// ----------------------------
 async function testFrontend() {
-
   console.log("\n🌐 Testing frontend pages...")
 
   const pages = [
@@ -38,26 +36,21 @@ async function testFrontend() {
 
   for (const page of pages) {
     try {
-
-      const res = await fetch(`https://endearing-lebkuchen-7ce2ef.netlify.app${page}`)
-
+      const res = await fetch(`${BASE}${page}`)
       console.log(`${page} → ${res.status}`)
-
     } catch (err) {
-
       console.log(`${page} → FAILED`)
     }
   }
 }
 
-// -----------------------------
-// Test products API
-// -----------------------------
+// ----------------------------
+// PRODUCTS TEST
+// ----------------------------
 async function testProducts() {
-
   console.log("\n📦 Testing products API...")
 
-  const res = await fetch(`${API}/api/products`)
+  const res = await fetch(`${BASE}/api/products`)
   const data = await res.json()
 
   console.log("Products count:", data.products.length)
@@ -68,18 +61,19 @@ async function testProducts() {
   }
 }
 
-// -----------------------------
-// Test user registration
-// -----------------------------
+// ----------------------------
+// USER REGISTER
+// ----------------------------
 async function testRegister() {
-
   console.log("\n👤 Testing user registration...")
 
-  const res = await fetch(`${API}/api/users/register`, {
+  const res = await fetch(`${BASE}/api/users/register`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json"
+    },
     body: JSON.stringify({
-      name: "Test User",
+      name: "API Test User",
       email: "apitest@example.com",
       password: "123456",
       phone: "9876543210",
@@ -88,20 +82,20 @@ async function testRegister() {
   })
 
   const data = await res.json()
-
   console.log("Register response:", data)
 }
 
-// -----------------------------
-// Test login
-// -----------------------------
+// ----------------------------
+// LOGIN TEST
+// ----------------------------
 async function testLogin() {
-
   console.log("\n🔑 Testing login...")
 
-  const res = await fetch(`${API}/api/users/login`, {
+  const res = await fetch(`${BASE}/api/users/login`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json"
+    },
     body: JSON.stringify({
       email: "apitest@example.com",
       password: "123456"
@@ -115,19 +109,34 @@ async function testLogin() {
   console.log("Login success:", !!token)
 }
 
-// -----------------------------
-// Test order creation
-// -----------------------------
-async function testCreateOrder() {
+// ----------------------------
+// PROFILE TEST (STEP 1)
+// ----------------------------
+async function testProfile() {
+  console.log("\n👤 Testing user profile...")
 
+  const res = await fetch(`${BASE}/api/users/profile`, {
+    headers: {
+      Authorization: `Bearer ${token}`
+    }
+  })
+
+  const data = await res.json()
+
+  console.log("Profile data:", {
+    name: data.name,
+    email: data.email,
+    phone: data.phone
+  })
+}
+
+// ----------------------------
+// CREATE ORDER
+// ----------------------------
+async function testCheckout() {
   console.log("\n🛒 Testing checkout...")
 
-  if (!productId) {
-    console.log("No products available")
-    return
-  }
-
-  const res = await fetch(`${API}/api/orders`, {
+  const res = await fetch(`${BASE}/api/orders`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -140,25 +149,24 @@ async function testCreateOrder() {
           quantity: 1
         }
       ],
-      totalPrice: productPrice,
-      shippingAddress: "Test User, Test Address, Pincode: 110001, Phone: 9876543210"
+      shippingAddress: "Test Address, Pincode: 110001, Phone: 9876543210",
+      totalPrice: productPrice
     })
   })
 
   const data = await res.json()
 
   console.log("Order status:", res.status)
-  console.log("Order response:", data)
+  console.log("Order response:", data._id)
 }
 
-// -----------------------------
-// Test orders route
-// -----------------------------
+// ----------------------------
+// ORDER HISTORY (STEP 2)
+// ----------------------------
 async function testOrders() {
-
   console.log("\n📋 Testing orders route...")
 
-  const res = await fetch(`${API}/api/orders/my-orders`, {
+  const res = await fetch(`${BASE}/api/orders/my-orders`, {
     headers: {
       Authorization: `Bearer ${token}`
     }
@@ -166,19 +174,13 @@ async function testOrders() {
 
   const data = await res.json()
 
-  if (Array.isArray(data)) {
-    console.log("Orders:", data.length)
-  } else if (data.orders) {
-    console.log("Orders:", data.orders.length)
-  } else {
-    console.log("Orders response:", data)
-  }
+  console.log("Orders count:", data.length)
 }
-// -----------------------------
-// Run all tests
-// -----------------------------
-async function runTests() {
 
+// ----------------------------
+// RUN ALL TESTS
+// ----------------------------
+async function runTests() {
   try {
 
     await testServer()
@@ -191,15 +193,16 @@ async function runTests() {
 
     await testLogin()
 
-    await testCreateOrder()
+    await testProfile()
+
+    await testCheckout()
 
     await testOrders()
 
-    console.log("\n✅ ALL TESTS COMPLETED")
+    console.log("\n✅ ALL SYSTEM TESTS COMPLETED")
 
   } catch (err) {
-
-    console.error("❌ Test failed:", err.message)
+    console.error("Test failed:", err.message)
   }
 }
 

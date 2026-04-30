@@ -22,7 +22,7 @@
                         <h3>Personal Profile</h3>
                         <p class="text-muted small">Update your basic information</p>
                     </div>
-                    
+
                     <div id="alert-box" class="alert" style="display:none"></div>
 
                     <form id="profile-form" onsubmit="updateProfile(event)">
@@ -30,10 +30,11 @@
                             <label>Full Name</label>
                             <input id="name" type="text" placeholder="Your display name" required />
                         </div>
-                        
+
                         <div class="form-group">
                             <label>Email Address</label>
-                            <input id="email" type="email" disabled style="background:var(--border); cursor:not-allowed;" />
+                            <input id="email" type="email" disabled
+                                style="background:var(--border); cursor:not-allowed;" />
                             <small class="text-muted">Email cannot be changed.</small>
                         </div>
 
@@ -55,7 +56,8 @@
 
                         <div class="form-group">
                             <label>Default Delivery Address</label>
-                            <textarea id="address" placeholder="Full residential or work address..." rows="3"></textarea>
+                            <textarea id="address" placeholder="Full residential or work address..."
+                                rows="3"></textarea>
                         </div>
 
                         <div class="form-actions" style="margin-top:2rem">
@@ -75,11 +77,12 @@
                             <a href="#" onclick="logout()" class="sidebar-link text-danger">🚪 Logout</a>
                         </div>
                     </div>
-                    
+
                     <div class="card" style="margin-top:1.5rem">
                         <h3>Need Help?</h3>
                         <p class="small text-muted">For order related queries or account support, contact us.</p>
-                        <a href="mailto:support@shopvibe.com" class="btn btn-secondary btn-sm btn-full" style="margin-top:0.5rem">Contact Support</a>
+                        <a href="mailto:support@shopvibe.com" class="btn btn-secondary btn-sm btn-full"
+                            style="margin-top:0.5rem">Contact Support</a>
                     </div>
                 </div>
             </div>
@@ -101,19 +104,19 @@
                 const res = await fetch(`${API}/api/users/profile`, {
                     headers: getAuthHeaders()
                 })
-                
+
                 if (!res.ok) {
                     if (res.status === 401) return window.location.href = "login.html"
                     throw new Error("Failed to fetch profile")
                 }
-                
+
                 const user = await res.json()
                 document.getElementById("name").value = user.name || ""
                 document.getElementById("email").value = user.email || ""
                 document.getElementById("phone").value = user.phone || ""
                 document.getElementById("address").value = user.address || ""
                 document.getElementById("pincode").value = user.pincode || ""
-                
+
                 // Update local storage just in case it's stale
                 localStorage.setItem("user", JSON.stringify(user))
             } catch (err) {
@@ -145,22 +148,58 @@
                     body: JSON.stringify({ name, phone, address, pincode })
                 })
                 const data = await res.json()
-                
+
                 if (!res.ok) {
                     throw new Error(data.message || "Failed to update profile")
                 }
-                
+
                 showToast("Profile updated successfully! ✨", "success")
-                
+
                 // Update local storage user data
                 const user = getUser()
                 localStorage.setItem("user", JSON.stringify({ ...user, name, phone, address, pincode }))
-                
+
             } catch (err) {
                 showAlert("alert-box", err.message)
             } finally {
                 setLoading("save-btn", false)
             }
+        }
+        async function loadProfile() {
+            const token = localStorage.getItem("token")
+
+            const res = await fetch(`${API}/api/users/profile`, {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            })
+
+            const user = await res.json()
+
+            document.getElementById("name").value = user.name
+            document.getElementById("phone").value = user.phone
+            document.getElementById("address").value = user.address || ""
+        }
+
+        async function updateProfile() {
+            const token = localStorage.getItem("token")
+
+            const res = await fetch(`${API}/api/users/profile`, {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    name: document.getElementById("name").value,
+                    phone: document.getElementById("phone").value,
+                    address: document.getElementById("address").value
+                })
+            })
+
+            const data = await res.json()
+
+            alert(data.message)
         }
 
         loadProfile()

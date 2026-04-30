@@ -14,120 +14,136 @@
     <main class="main">
         <div class="container section">
             <h1 class="section-title">My Orders</h1>
-            <p class="section-sub">View your order history and tracking status</p>
+            <p class="section-sub">Track and manage your recent purchases</p>
 
-            <div id="loader" class="loader">
+            <!-- Loader -->
+            <div id="loader" class="loader" style="display:none">
                 <div class="spinner"></div>
             </div>
 
+            <!-- Empty State -->
             <div id="empty-orders" class="empty-state" style="display:none">
                 <div class="empty-icon">📦</div>
                 <h3>No orders yet</h3>
-                <p>Looks like you haven't placed any orders. Start shopping today!</p>
-                <a href="index.html" class="btn btn-primary">Start Shopping</a>
+                <p>You haven't placed any orders yet. Start shopping now!</p>
+                <a href="index.html" class="btn btn-primary">Browse Products</a>
             </div>
 
-            <div id="orders-container" class="orders-stack" style="display:none;">
-                <!-- Orders injected here -->
+            <!-- Orders Grid -->
+            <div id="orders-container" class="orders-grid" style="display:none; flex-direction: column; gap: 20px;">
+                <!-- Orders will be injected here -->
             </div>
         </div>
     </main>
 
     <div id="toast"></div>
+
     <script src="js/script.js"></script>
     <script>
-        document.getElementById("navbar-root").innerHTML = navbar("orders")
-        updateCartCount()
+        document.getElementById("navbar-root").innerHTML = navbar("orders");
+        updateCartCount();
 
         if (!isLoggedIn()) {
-            window.location.href = "login.html?redirect=orders.html"
+            window.location.href = "login.html?redirect=orders.html";
+        }
+
+        // Function to generate the step-by-step status bar
+        function getStatusHtml(currentStatus) {
+            const steps = ["pending", "processing", "shipped", "delivered"];
+            const currentIndex = steps.indexOf(currentStatus.toLowerCase());
+
+            return `
+            <div class="order-status-bar" style="display: flex; gap: 10px; margin-top: 15px; justify-content: space-between;">
+                ${steps.map((step, index) => `
+                <div class="status-step ${index <= currentIndex ? 'status-active' : ''}"
+                    style="flex: 1; text-align: center; font-size: 0.7rem; padding: 5px; border-radius: 4px; border: 1px solid var(--border); 
+                             ${index <= currentIndex ? 'background: var(--primary); color: white;' : 'background: rgba(255,255,255,0.05);'}">
+                    ${step.toUpperCase()}
+                </div>
+                `).join('')}
+            </div>`;
         }
 
         async function loadOrders() {
             try {
-                document.getElementById("loader").style.display = "flex"
-                document.getElementById("orders-container").style.display = "none"
-                document.getElementById("empty-orders").style.display = "none"
+                document.getElementById("loader").style.display = "flex";
+                document.getElementById("orders-container").style.display = "none";
+                document.getElementById("empty-orders").style.display = "none";
 
                 const res = await fetch(`${API}/api/orders/my-orders`, {
                     headers: getAuthHeaders()
-                })
-                
+                });
+
                 if (!res.ok) {
                     if (res.status === 401) {
-                        showToast("Session expired. Please login again.", "error")
-                        setTimeout(() => window.location.href = "login.html", 1500)
-                        return
+                        showToast("Session expired. Please login again.", "error");
+                        setTimeout(() => window.location.href = "login.html", 1500);
+                        return;
                     }
-                    throw new Error("Failed to load orders")
-                }
-                
-                const orders = await res.json()
-                
-                if (!orders || orders.length === 0) {
-                    document.getElementById("empty-orders").style.display = "block"
-                    return
+                    throw new Error("Failed to load orders");
                 }
 
-                renderOrders(orders)
+                const orders = await res.json();
+
+                if (!orders || orders.length === 0) {
+                    document.getElementById("empty-orders").style.display = "block";
+                    return;
+                }
+
+                renderOrders(orders);
             } catch (err) {
-                console.error(err)
-                showToast("Error loading orders. Please try again later.", "error")
+                console.error(err);
+                showToast("Error loading orders.", "error");
             } finally {
-                document.getElementById("loader").style.display = "none"
+                document.getElementById("loader").style.display = "none";
             }
         }
 
         function renderOrders(orders) {
-            const container = document.getElementById("orders-container")
-            container.style.display = "flex"
-            
+            const container = document.getElementById("orders-container");
+            container.style.display = "flex";
+
             container.innerHTML = orders.map(order => {
                 const date = new Date(order.createdAt).toLocaleDateString("en-IN", {
-                    year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
-                })
-                
-                const statusClass = `status-${order.status.toLowerCase()}`
-                
+                    year: 'numeric', month: 'short', day: 'numeric'
+                });
+
                 return `
-                <div class="order-card card fade-in">
-                    <div class="order-header">
-                        <div class="order-meta">
-                            <span class="order-id">#${order._id}</span>
-                            <span class="order-date">${date}</span>
+                <div class="order-card card fade-in"
+                    style="margin-bottom: 20px; padding: 20px; border: 1px solid var(--border); border-radius: 12px;">
+                    <div class="order-header" style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <span style="font-weight: bold; color: var(--primary);">#${order._id.slice(-6)}</span>
+                            <div class="text-muted" style="font-size: 0.8rem;">${date}</div>
                         </div>
-                        <div class="order-badge ${statusClass}">${order.status}</div>
-                    </div>
-                    
-                    <div class="order-body">
-                        <div class="order-items-list">
-                            ${(order.products || []).map(item => `
-                                <div class="order-product">
-                                    <div class="product-mini-info">
-                                        <strong>${item.productId?.name || 'Unknown Product'}</strong>
-                                        <span class="text-muted">× ${item.quantity}</span>
-                                    </div>
-                                    <span class="product-item-total">${formatPrice((item.productId?.price || 0) * item.quantity)}</span>
-                                </div>
-                            `).join("")}
+                        <div class="order-badge status-${order.status.toLowerCase()}"
+                            style="padding: 4px 12px; border-radius: 20px; background: var(--primary); color: #fff; font-size: 0.8rem;">
+                            ${order.status.toUpperCase()}
                         </div>
                     </div>
 
-                    <div class="order-footer">
-                        <div class="shipping-preview">
-                            <span class="text-muted small">Shipped to:</span>
-                            <p class="small">${order.shippingAddress || 'No address provided'}</p>
+                    <div class="order-body" style="margin: 15px 0;">
+                        ${(order.products || []).map(item => `
+                        <div style="display: flex; justify-content: space-between; font-size: 0.9rem; margin-bottom: 5px;">
+                            <span>${item.productId?.name || 'Product'} <small class="text-muted">x${item.quantity}</small></span>
+                            <span>${formatPrice((item.productId?.price || 0) * item.quantity)}</span>
                         </div>
-                        <div class="order-grand-total">
-                            <span class="total-label">Total Paid</span>
-                            <span class="total-amount">${formatPrice(order.totalPrice)}</span>
-                        </div>
+                        `).join("")}
                     </div>
-                </div>`
-            }).join("")
+
+                    ${getStatusHtml(order.status)}
+
+                    <div class="order-footer"
+                        style="margin-top: 15px; padding-top: 15px; border-top: 1px dashed var(--border); display: flex; justify-content: space-between; align-items: center;">
+                        <span class="text-muted" style="font-size: 0.8rem;">Total Amount</span>
+                        <strong style="font-size: 1.1rem; color: var(--primary);">${formatPrice(order.totalPrice)}</strong>
+                    </div>
+                </div>`;
+            }).join("");
         }
 
-        loadOrders()
+        // Initial Call
+        loadOrders();
     </script>
 </body>
 

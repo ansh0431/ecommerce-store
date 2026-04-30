@@ -3,7 +3,7 @@ const router = express.Router()
 const { body } = require("express-validator")
 const validate = require("../middleware/validate")
 const auth = require("../middleware/auth")
-const { register, login, getProfile, updateProfile } = require("../controllers/userController")
+const { register, login, getUserProfile, updateUserProfile } = require("../controllers/userController")
 
 const registerValidation = [
     body("name").trim().notEmpty().withMessage("Name is required")
@@ -28,7 +28,6 @@ const profileValidation = [
     validate
 ]
 
-router.get("/profile", auth, getProfile)
-router.put("/profile", auth, profileValidation, updateProfile)
-
+router.get("/profile", auth, getUserProfile)
+router.put("/profile", auth, profileValidation, updateUserProfile)
 module.exports = router

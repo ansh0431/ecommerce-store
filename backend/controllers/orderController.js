@@ -1,6 +1,5 @@
 const Order = require("../models/Order")
 const Product = require("../models/Product")
-const sendEmail = require("../utils/sendEmail")
 
 // POST /api/orders — protected
 const createOrder = async (req, res, next) => {
@@ -46,29 +45,6 @@ const createOrder = async (req, res, next) => {
             status: "pending"
         })
 
-        // Build HTML email
-        let itemsHtml = products.map(item => {
-            const dbProd = dbProducts.find(p => p._id.toString() === item.productId)
-            return `<li>${dbProd.name} (x${item.quantity}) - ₹${dbProd.price * item.quantity}</li>`
-        }).join("")
-
-        const emailHtml = `
-            <h2>Order Confirmation</h2>
-            <p>Thank you for your order, ${req.user.name || "Customer"}!</p>
-            <p><strong>Order ID:</strong> ${order._id}</p>
-            <p><strong>Total Price:</strong> ₹${calculatedTotal}</p>
-            <h3>Products Purchased:</h3>
-            <ul>${itemsHtml}</ul>
-            <p>We'll notify you once it's shipped.</p>
-        `
-
-        // Send email (don't await to avoid blocking response, or await if you want to ensure delivery)
-        sendEmail({
-            email: req.user.email,
-            subject: "ShopVibe - Order Confirmation",
-            html: emailHtml
-        })
-
         res.status(201).json(order)
     } catch (error) {
         next(error)
@@ -94,6 +70,9 @@ const getAllOrders = async (req, res, next) => {
 // GET /api/orders/:userId — user's own orders (protected)
 const getOrdersByUser = async (req, res, next) => {
     try {
+        console.log("DEBUG: getOrdersByUser route hit")
+        console.log("userId param:", req.params.userId)
+
         // Users can only see their own orders
         if (req.user.id !== req.params.userId && req.user.role !== "admin") {
             return res.status(403).json({ message: "Forbidden: access denied" })
@@ -110,6 +89,10 @@ const getOrdersByUser = async (req, res, next) => {
 
 const getMyOrders = async (req, res, next) => {
     try {
+
+        console.log("DEBUG: getMyOrders route hit")
+        console.log("User from token:", req.user)
+
         const orders = await Order.find({ userId: req.user.id })
             .populate("products.productId", "name price image")
             .sort({ createdAt: -1 })

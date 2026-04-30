@@ -16,10 +16,10 @@ const createProduct = async (req, res, next) => {
 // GET /api/products
 const getProducts = async (req, res, next) => {
     try {
-        const { category, search, sort, page = 1, limit = 20 } = req.query
+        const { category, search, sort, minPrice, maxPrice, page = 1, limit = 20 } = req.query
 
         // Cache key based on query params
-        const cacheKey = `products_${category || 'all'}_${search || 'none'}_${sort || 'default'}_${page}_${limit}`
+        const cacheKey = `products_${category || 'all'}_${search || 'none'}_${sort || 'default'}_${minPrice || '0'}_${maxPrice || 'inf'}_${page}_${limit}`
         const cachedRes = cache.get(cacheKey)
         if (cachedRes) {
             return res.json(cachedRes)
@@ -27,12 +27,27 @@ const getProducts = async (req, res, next) => {
 
         const filter = {}
         if (category) filter.category = category
-        if (search) filter.$text = { $search: search }
+        
+        // Regex search for name (Task 1)
+        if (search) {
+            filter.name = { $regex: search, $options: "i" }
+        }
+
+        // Price range filter (Task 1)
+        if (minPrice || maxPrice) {
+            filter.price = {}
+            if (minPrice) filter.price.$gte = Number(minPrice)
+            if (maxPrice) filter.price.$lte = Number(maxPrice)
+        }
 
         const skip = (Number(page) - 1) * Number(limit)
-        const sortObj = sort === "price_asc" ? { price: 1 }
-            : sort === "price_desc" ? { price: -1 }
-                : { createdAt: -1 }
+        
+        // Sorting logic (Task 3)
+        const sortObj = {}
+        if (sort === "price_asc") sortObj.price = 1
+        else if (sort === "price_desc") sortObj.price = -1
+        else if (sort === "name_asc") sortObj.name = 1
+        else sortObj.createdAt = -1
 
         const [products, total] = await Promise.all([
             Product.find(filter).sort(sortObj).skip(skip).limit(Number(limit)),

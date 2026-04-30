@@ -12,6 +12,7 @@ const connectDB = require("./config/db")
 const productRoutes = require("./routes/productRoutes")
 const userRoutes = require("./routes/userRoutes")
 const orderRoutes = require("./routes/orderRoutes")
+const paymentRoutes = require("./routes/paymentRoutes")
 const chatRoutes = require("./routes/chatRoutes")
 const adminRoutes = require("./routes/adminRoutes")
 const errorHandler = require("./middleware/errorHandler")
@@ -21,8 +22,10 @@ const app = express()
 // Connect to MongoDB
 connectDB()
 
-// Security Headers
-app.use(helmet())
+// Security Headers (CSP disabled to allow inline scripts in this project's structure)
+app.use(helmet({
+    contentSecurityPolicy: false
+}))
 
 // CORS setup (Update origin for production)
 app.use(cors())
@@ -50,16 +53,17 @@ app.use((req, res, next) => {
     next()
 })
 
+// Serve Static Files
+const path = require("path")
+app.use(express.static(path.join(__dirname, "../frontend")))
+
 // Routes
 app.use("/api/products", productRoutes)
 app.use("/api/users", userRoutes)
 app.use("/api/orders", orderRoutes)
-app.use("/api/chat", chatRoutes)
+app.use("/api/payment", paymentRoutes)
 app.use("/api/admin", adminRoutes)
-// Root endpoint
-app.get("/", (req, res) => {
-    res.send("Ecommerce API Running (Production Ready)")
-})
+app.use("/api/chat", chatRoutes);
 
 // Handle unhandled routes (404)
 app.use((req, res, next) => {

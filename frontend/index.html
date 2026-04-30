@@ -45,19 +45,26 @@
                     <select id="cat-filter">
                         <option value="">All Categories</option>
                     </select>
+                    <div class="price-inputs">
+                        <input id="min-price" type="number" placeholder="Min ₹" class="price-input" />
+                        <input id="max-price" type="number" placeholder="Max ₹" class="price-input" />
+                    </div>
                     <select id="sort-filter">
                         <option value="latest">Latest</option>
                         <option value="price_asc">Price: Low to High</option>
                         <option value="price_desc">Price: High to Low</option>
+                        <option value="name_asc">Name: A-Z</option>
                     </select>
                 </div>
+
+                <div id="active-filters" class="active-filters"></div>
 
                 <div id="loader" class="loader">
                     <div class="spinner"></div>
                 </div>
-                
+
                 <div id="products-grid" class="product-grid" style="display:none"></div>
-                
+
                 <div id="empty" class="empty-state" style="display:none">
                     <div class="empty-icon">📦</div>
                     <h3>No products found</h3>
@@ -83,26 +90,30 @@
         let currentPage = 1
         let totalPages = 1
 
-        async function loadProducts(q = "", cat = "", sort = "latest", page = 1) {
+        async function loadProducts(q = "", cat = "", sort = "latest", min = "", max = "", page = 1) {
             try {
                 document.getElementById("loader").style.display = "flex"
                 document.getElementById("products-grid").style.display = "none"
                 document.getElementById("empty").style.display = "none"
                 document.getElementById("pagination").style.display = "none"
-                
+
                 const query = new URLSearchParams()
                 if (q) query.append("search", q)
                 if (cat) query.append("category", cat)
                 if (sort) query.append("sort", sort)
+                if (min) query.append("minPrice", min)
+                if (max) query.append("maxPrice", max)
                 query.append("page", page)
                 query.append("limit", 12)
-                
+
+                updateActiveFilters(q, cat, sort, min, max)
+
                 const res = await fetch(`${API}/api/products?${query.toString()}`)
                 const data = await res.json()
 
                 const products = data.products || []
                 const pagination = data.pagination || { pages: 1, total: products.length }
-                
+
                 totalPages = pagination.pages
                 currentPage = page
 
@@ -112,7 +123,7 @@
                     // but for now let's use what we have
                     populateCategories(products)
                 }
-                
+
                 renderProducts(products)
                 renderPagination(pagination)
             } catch (err) {
@@ -128,21 +139,21 @@
             // Ideally backend would have a /categories endpoint
             const cats = [...new Set(products.map(p => p.category).filter(Boolean))]
             const sel = document.getElementById("cat-filter")
-            cats.forEach(c => { 
+            cats.forEach(c => {
                 const o = document.createElement("option")
                 o.value = c
                 o.textContent = c
-                sel.appendChild(o) 
+                sel.appendChild(o)
             })
         }
 
         function renderProducts(products) {
             const grid = document.getElementById("products-grid")
             const empty = document.getElementById("empty")
-            if (!products || !products.length) { 
+            if (!products || !products.length) {
                 grid.style.display = "none"
                 empty.style.display = "block"
-                return 
+                return
             }
             empty.style.display = "none"
             grid.style.display = "grid"
@@ -191,23 +202,55 @@
             document.getElementById("next-page").disabled = currentPage === pagination.pages
         }
 
+        function updateActiveFilters(q, cat, sort, min, max) {
+            const container = document.getElementById("active-filters")
+            let filters = []
+            if (q) filters.push(`Search: "${q}"`)
+            if (cat) filters.push(`Category: ${cat}`)
+            if (min) filters.push(`Min: ₹${min}`)
+            if (max) filters.push(`Max: ₹${max}`)
+
+            if (filters.length > 0) {
+                container.style.display = "flex"
+                container.innerHTML = filters.map(f => `<span class="filter-tag">${f}</span>`).join("") +
+                    `<button class="btn-clear" onclick="clearFilters()">Clear All</button>`
+            } else {
+                container.style.display = "none"
+            }
+        }
+
+        function clearFilters() {
+            document.getElementById("search-input").value = ""
+            document.getElementById("cat-filter").value = ""
+            document.getElementById("sort-filter").value = "latest"
+            document.getElementById("min-price").value = ""
+            document.getElementById("max-price").value = ""
+            applyFilters()
+        }
+
         const applyFilters = debounce(() => {
             const q = document.getElementById("search-input").value.trim()
             const cat = document.getElementById("cat-filter").value
             const sort = document.getElementById("sort-filter").value
-            loadProducts(q, cat, sort, 1)
+            const min = document.getElementById("min-price").value
+            const max = document.getElementById("max-price").value
+            loadProducts(q, cat, sort, min, max, 1)
         }, 500)
 
         document.getElementById("search-input").addEventListener("input", applyFilters)
         document.getElementById("cat-filter").addEventListener("change", applyFilters)
         document.getElementById("sort-filter").addEventListener("change", applyFilters)
+        document.getElementById("min-price").addEventListener("input", applyFilters)
+        document.getElementById("max-price").addEventListener("input", applyFilters)
 
         document.getElementById("prev-page").addEventListener("click", () => {
             if (currentPage > 1) {
                 const q = document.getElementById("search-input").value.trim()
                 const cat = document.getElementById("cat-filter").value
                 const sort = document.getElementById("sort-filter").value
-                loadProducts(q, cat, sort, currentPage - 1)
+                const min = document.getElementById("min-price").value
+                const max = document.getElementById("max-price").value
+                loadProducts(q, cat, sort, min, max, currentPage - 1)
             }
         })
 
@@ -216,12 +259,15 @@
                 const q = document.getElementById("search-input").value.trim()
                 const cat = document.getElementById("cat-filter").value
                 const sort = document.getElementById("sort-filter").value
-                loadProducts(q, cat, sort, currentPage + 1)
+                const min = document.getElementById("min-price").value
+                const max = document.getElementById("max-price").value
+                loadProducts(q, cat, sort, min, max, currentPage + 1)
             }
         })
 
         loadProducts()
     </script>
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 </body>
 
 </html>

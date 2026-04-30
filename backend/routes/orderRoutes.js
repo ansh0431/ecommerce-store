@@ -37,7 +37,7 @@ router.get("/my-orders", auth, getMyOrders)
 
 router.get("/admin", auth, getAllOrders)
 
-router.get("/user/:userId", auth, userIdParam, getOrdersByUser)
+router.get("/by-user/:userId", auth, userIdParam, getOrdersByUser)
 
 router.put("/:id/status", auth, idParam, statusValidation, updateOrderStatus)
 module.exports = router

@@ -1,4 +1,7 @@
-const API = "http://localhost:5000";
+// Auto-detect environment to fix ERR_CONNECTION_REFUSED on mobile/other devices
+const isLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+// REPLACE the second string with your deployed backend URL (e.g., https://your-backend.onrender.com) once you deploy it.
+const API = isLocalhost ? "http://localhost:5000" : "https://YOUR-DEPLOYED-BACKEND-URL.onrender.com";
 
 // ── Auth ──
 const getToken = () => localStorage.getItem("token");

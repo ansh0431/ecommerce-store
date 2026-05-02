@@ -29,7 +29,22 @@ app.use(helmet({
 }))
 
 // CORS setup (Update origin for production)
-app.use(cors())
+const allowedOrigins = [
+    "http://localhost:5000",
+    "http://localhost:5500",
+    "http://127.0.0.1:5500",
+    "https://endearing-lebkuchen-7ce2ef.netlify.app"
+]
+app.use(cors({
+    origin: function (origin, callback) {
+        if (!origin || allowedOrigins.includes(origin)) {
+            callback(null, true)
+        } else {
+            callback(new Error('Not allowed by CORS'))
+        }
+    },
+    credentials: true
+}))
 
 // Rate Limiting (prevent brute force & DDoS)
 const limiter = rateLimit({

@@ -44,6 +44,14 @@ const orderSchema = new mongoose.Schema(
                 message: "Invalid status value"
             },
             default: "pending"
+        },
+        paymentMethod: {
+            type: String,
+            enum: {
+                values: ["online", "cod"],
+                message: "Invalid payment method"
+            },
+            default: "online"
         }
     },
     { timestamps: true }   // replaces manual createdAt, adds updatedAt too

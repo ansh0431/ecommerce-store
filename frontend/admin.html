@@ -132,6 +132,7 @@
                                 <th>Customer</th>
                                 <th>Date</th>
                                 <th>Total</th>
+                                <th>Payment</th>
                                 <th>Status</th>
                                 <th>Actions</th>
                             </tr>
@@ -421,9 +422,14 @@
                     </td>
                     <td>${new Date(o.createdAt).toLocaleDateString()}</td>
                     <td>${formatPrice(o.totalPrice)}</td>
+                    <td>
+                        <span class="status-pill" style="background: ${o.paymentMethod === 'cod' ? '#fff8e1' : '#e8f5e9'}; color: ${o.paymentMethod === 'cod' ? '#f57f17' : '#388e3c'}; border: 1px solid ${o.paymentMethod === 'cod' ? '#ffe082' : '#a5d6a7'};">
+                            ${(o.paymentMethod || 'online').toUpperCase()}
+                        </span>
+                    </td>
                     <td><span class="status-pill status-${o.status.toLowerCase()}">${o.status}</span></td>
                     <td>
-                        <button class="btn btn-secondary btn-sm" onclick="openOrderModal('${o._id}', '${o.status}', '${o.userId?.name}')">Update Status</button>
+                        <button class="btn btn-secondary btn-sm" onclick="openOrderModal('${o._id}', '${o.status}', '${(o.userId?.name || 'Customer').replace(/'/g, "\\'")}')">Update Status</button>
                     </td>
                 </tr>
             `).join("")

@@ -4,7 +4,7 @@ const Product = require("../models/Product")
 // POST /api/orders — protected
 const createOrder = async (req, res, next) => {
     try {
-        const { products, totalPrice, shippingAddress } = req.body
+        const { products, totalPrice, shippingAddress, paymentMethod = "online" } = req.body
 
         // Server-side totalPrice verification — never trust client
         const productIds = products.map(p => p.productId)
@@ -42,7 +42,8 @@ const createOrder = async (req, res, next) => {
             products,
             totalPrice: calculatedTotal,
             shippingAddress,
-            status: "pending"
+            paymentMethod,
+            status: paymentMethod === "cod" ? "processing" : "pending"
         })
 
         res.status(201).json(order)

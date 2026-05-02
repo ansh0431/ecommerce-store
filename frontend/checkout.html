@@ -95,8 +95,18 @@
                             <span id="sum-total">₹0</span>
                         </div>
 
-                        <div class="payment-method-badge">
-                            💵 Cash on Delivery (Available)
+                        <div class="payment-selection" style="margin: 1.5rem 0; padding: 1rem; border: 1px solid var(--border); border-radius: var(--radius-md); background: #f9f9fa;">
+                            <h3 style="font-size: 0.85rem; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 0.75rem;">Payment Method</h3>
+                            <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                                <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-size: 0.9rem;">
+                                    <input type="radio" name="payment-method" value="ONLINE" checked>
+                                    <span>Online Payment (UPI, Cards, Netbanking)</span>
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-size: 0.9rem;">
+                                    <input type="radio" name="payment-method" value="COD">
+                                    <span>Cash on Delivery (COD)</span>
+                                </label>
+                            </div>
                         </div>
 
                         <button id="place-order-btn" class="btn btn-primary btn-full btn-lg" onclick="placeOrder()">
@@ -189,8 +199,41 @@
 
             const totalPrice = getCartTotal()
             const shippingAddress = `${name}, ${address}, PIN: ${pincode}, Phone: ${phone}`
+            const selectedMethod = document.querySelector('input[name="payment-method"]:checked').value
 
             setLoading("place-order-btn", true)
+
+            if (selectedMethod === "COD") {
+                try {
+                    const orderData = {
+                        products: cart.map(item => ({ productId: item._id, quantity: item.qty || 1 })),
+                        totalPrice: totalPrice,
+                        shippingAddress: shippingAddress,
+                        paymentMethod: "cod"
+                    }
+
+                    const orderRes = await fetch(`${API}/api/orders`, {
+                        method: "POST",
+                        headers: getAuthHeaders(),
+                        body: JSON.stringify(orderData)
+                    })
+                    const finalData = await orderRes.json()
+                    if (!orderRes.ok) throw new Error(finalData.message || "Failed to place COD order")
+
+                    // Success
+                    saveCart([]) // Clear cart
+                    document.getElementById("checkout-content").style.display = "none"
+                    document.getElementById("success-order-id").textContent = `#${finalData._id}`
+                    document.getElementById("order-success").style.display = "block"
+                    showToast("Order placed successfully via COD! 🎉", "success")
+                    window.scrollTo({ top: 0, behavior: 'smooth' })
+                } catch (err) {
+                    showAlert("checkout-alert", err.message)
+                } finally {
+                    setLoading("place-order-btn", false)
+                }
+                return;
+            }
 
             try {
                 // 1. Create Razorpay Order

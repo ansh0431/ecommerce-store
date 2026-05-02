@@ -7,6 +7,7 @@ const createProduct = async (req, res, next) => {
     try {
         if (req.user.role !== "admin") return res.status(403).json({ message: "Admin access required" })
         const product = await Product.create(req.body)
+        cache.flushAll() // Clear cache so new products show immediately
         res.status(201).json(product)
     } catch (error) {
         next(error)
@@ -94,6 +95,7 @@ const updateProduct = async (req, res, next) => {
             { new: true, runValidators: true }
         )
         if (!updated) return res.status(404).json({ message: "Product not found" })
+        cache.flushAll() // Clear cache so updates show immediately
         res.json(updated)
     } catch (error) {
         next(error)

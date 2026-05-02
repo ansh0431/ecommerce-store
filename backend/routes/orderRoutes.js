@@ -13,6 +13,7 @@ const orderValidation = [
     body("products.*.quantity").isInt({ min: 1 }).withMessage("Quantity must be at least 1"),
     body("totalPrice").isFloat({ min: 0 }).withMessage("Total price must be non-negative"),
     body("shippingAddress").notEmpty().withMessage("Shipping address is required"),
+    body("paymentMethod").optional().isIn(["online", "cod"]).withMessage("Invalid payment method"),
     validate
 ]
 

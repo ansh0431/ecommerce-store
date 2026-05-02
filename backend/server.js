@@ -15,6 +15,7 @@ const orderRoutes = require("./routes/orderRoutes")
 const paymentRoutes = require("./routes/paymentRoutes")
 const chatRoutes = require("./routes/chatRoutes")
 const adminRoutes = require("./routes/adminRoutes")
+const uploadRoutes = require("./routes/uploadRoutes")
 const errorHandler = require("./middleware/errorHandler")
 
 const app = express()
@@ -56,6 +57,7 @@ app.use((req, res, next) => {
 // Serve Static Files
 const path = require("path")
 app.use(express.static(path.join(__dirname, "../frontend")))
+app.use("/uploads", express.static(path.join(__dirname, "uploads")))
 
 // Routes
 app.use("/api/products", productRoutes)
@@ -64,6 +66,7 @@ app.use("/api/orders", orderRoutes)
 app.use("/api/payment", paymentRoutes)
 app.use("/api/admin", adminRoutes)
 app.use("/api/chat", chatRoutes);
+app.use("/api/upload", uploadRoutes);
 
 // Handle unhandled routes (404)
 app.use((req, res, next) => {

@@ -31,11 +31,7 @@ const idParam = [
     param("id").isMongoId().withMessage("Invalid product ID"),
     validate
 ]
-console.log("DEBUG CHECK →", {
-    auth,
-    createProductReview,
-    idParam
-})
+
 
 router.post("/", auth, ...productValidation, createProduct)
 

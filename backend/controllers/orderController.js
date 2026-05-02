@@ -71,8 +71,7 @@ const getAllOrders = async (req, res, next) => {
 // GET /api/orders/:userId — user's own orders (protected)
 const getOrdersByUser = async (req, res, next) => {
     try {
-        console.log("DEBUG: getOrdersByUser route hit")
-        console.log("userId param:", req.params.userId)
+
 
         // Users can only see their own orders
         if (req.user.id !== req.params.userId && req.user.role !== "admin") {
@@ -91,8 +90,6 @@ const getOrdersByUser = async (req, res, next) => {
 const getMyOrders = async (req, res, next) => {
     try {
 
-        console.log("DEBUG: getMyOrders route hit")
-        console.log("User from token:", req.user)
 
         const orders = await Order.find({ userId: req.user.id })
             .populate("products.productId", "name price image")

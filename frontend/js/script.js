@@ -1,6 +1,17 @@
-// Auto-detect environment to fix ERR_CONNECTION_REFUSED
-const isLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
-const API = isLocalhost ? "http://localhost:5000" : "https://ecommerce-store-ju5z.onrender.com";
+// ── API Base URL ──
+// Priority order:
+//   1. Runtime config injected by server (window.APP_CONFIG.API_URL)
+//   2. Local dev detection → localhost:5000
+//   3. Production fallback → Render backend
+const _isLocalHost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+const API_BASE_URL = (window.APP_CONFIG && window.APP_CONFIG.API_URL)
+    ? window.APP_CONFIG.API_URL
+    : _isLocalHost
+        ? "http://localhost:5000"
+        : "https://ecommerce-store-ju5z.onrender.com";
+
+// Alias kept for backward-compatibility with all existing fetch(${API}/...) calls
+const API = API_BASE_URL;
 
 // ── Auth ──
 const getToken = () => localStorage.getItem("token");

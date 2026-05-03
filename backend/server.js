@@ -5,7 +5,7 @@ const cors = require("cors")
 const helmet = require("helmet")
 const hpp = require("hpp")
 const sanitize = require("mongo-sanitize")
-
+app.set('trust proxy', 1);
 const rateLimit = require("express-rate-limit")
 
 const connectDB = require("./config/db")

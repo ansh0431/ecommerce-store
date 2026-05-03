@@ -1,6 +1,7 @@
 require("dotenv").config()
 
 const express = require("express")
+const app = express()
 const cors = require("cors")
 const helmet = require("helmet")
 const hpp = require("hpp")
@@ -18,7 +19,7 @@ const adminRoutes = require("./routes/adminRoutes")
 const uploadRoutes = require("./routes/uploadRoutes")
 const errorHandler = require("./middleware/errorHandler")
 
-const app = express()
+
 
 // Connect to MongoDB
 connectDB()

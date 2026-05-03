@@ -1,13 +1,12 @@
 require("dotenv").config()
 
 const express = require("express")
-const app = express()
 const cors = require("cors")
 const helmet = require("helmet")
 const hpp = require("hpp")
 const sanitize = require("mongo-sanitize")
-app.set('trust proxy', 1);
 const rateLimit = require("express-rate-limit")
+const path = require("path")
 
 const connectDB = require("./config/db")
 const productRoutes = require("./routes/productRoutes")
@@ -19,6 +18,10 @@ const adminRoutes = require("./routes/adminRoutes")
 const uploadRoutes = require("./routes/uploadRoutes")
 const errorHandler = require("./middleware/errorHandler")
 
+const app = express()
+
+// Trust Render/Netlify load balancers (must be before any middleware)
+app.set('trust proxy', 1)
 
 
 // Connect to MongoDB
@@ -29,13 +32,15 @@ app.use(helmet({
     contentSecurityPolicy: false
 }))
 
-// CORS setup (Update origin for production)
+// CORS — allow local dev + Render backend + Netlify frontend
 const allowedOrigins = [
     "http://localhost:5000",
     "http://localhost:5500",
     "http://127.0.0.1:5500",
-    "https://endearing-lebkuchen-7ce2ef.netlify.app"
-]
+    "https://ecommerce-store-ju5z.onrender.com",
+    "https://endearing-lebkuchen-7ce2ef.netlify.app",
+    process.env.FRONTEND_URL
+].filter(Boolean)
 app.use(cors({
     origin: function (origin, callback) {
         if (!origin || allowedOrigins.includes(origin)) {
@@ -71,7 +76,6 @@ app.use((req, res, next) => {
 })
 
 // Serve Static Files
-const path = require("path")
 app.use(express.static(path.join(__dirname, "../frontend")))
 app.use("/uploads", express.static(path.join(__dirname, "uploads")))
 
@@ -95,7 +99,8 @@ app.use((req, res, next) => {
 app.use(errorHandler)
 
 
-const PORT = process.env.PORT || 5000
+// Render injects PORT automatically; fallback to 10000 for local dev
+const PORT = process.env.PORT || 10000
 
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`)
